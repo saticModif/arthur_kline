@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm create vite:*)",
+      "Bash(pnpm create:*)",
+      "Bash(pnpm exec create-vite:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
