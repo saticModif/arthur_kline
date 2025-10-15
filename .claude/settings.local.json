@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pnpm create vite:*)",
       "Bash(pnpm create:*)",
-      "Bash(pnpm exec create-vite:*)"
+      "Bash(pnpm exec create-vite:*)",
+      "Bash(npm run dev)"
     ],
     "deny": [],
     "ask": []
