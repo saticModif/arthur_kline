@@ -13,6 +13,30 @@
         #loading-indicator,body.chart-page {
             background: 0 0;
         }
+        
+        /* 强制折叠指标图例 - 默认隐藏所有指标的值容器 */
+        .pane-legend-wrap.study .pane-legend-item-value-container,
+        .pane-legend-wrap.study .pane-legend-item-value-wrap,
+        .pane-legend-wrap.study .pane-legend-item-value,
+        .pane-legend-wrap.study .pane-legend-item-additional {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+        }
+        
+        /* 只有在明确展开时才显示（通过 expand-line 类和用户交互） */
+        .pane-legend-wrap.study.expand-line .pane-legend-item-value-container,
+        .pane-legend-wrap.study.expand-line .pane-legend-item-value-wrap,
+        .pane-legend-wrap.study.expand-line .pane-legend-item-value,
+        .pane-legend-wrap.study.expand-line .pane-legend-item-additional {
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: auto !important;
+            width: auto !important;
+        }
     </style>
 </head>
 
@@ -85,6 +109,59 @@
     <script src="https://bzeex.oss-cn-hongkong.aliyuncs.com/assets/charting_library/static/bundles/vendors.8c445fe91dc494c5dec6.js"></script>
     <!-- <script src="https://bzeex.oss-cn-hongkong.aliyuncs.com/assets/charting_library/static/bundles/library.52f448f933885e5e0fed.js"></script> -->
     <script src="./bundles/library.52f448f933885e5e0fed.js"></script>
+    <script>
+        // 强制隐藏指标图例的脚本（默认隐藏，不显示展开按钮）
+        (function hideLegendValues() {
+            function hide() {
+                // 隐藏所有指标的值容器（包括值、标题等）
+                var valueContainers = document.querySelectorAll('.pane-legend-wrap.study .pane-legend-item-value-container');
+                valueContainers.forEach(function(el) {
+                    el.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                });
+                
+                var valueWraps = document.querySelectorAll('.pane-legend-wrap.study .pane-legend-item-value-wrap');
+                valueWraps.forEach(function(el) {
+                    el.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                });
+                
+                var values = document.querySelectorAll('.pane-legend-wrap.study .pane-legend-item-value, .pane-legend-wrap.study .pane-legend-item-additional');
+                values.forEach(function(el) {
+                    el.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                });
+            }
+            
+            // DOM 加载完成后执行
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', hide);
+            } else {
+                hide();
+            }
+            
+            // 使用 MutationObserver 监听并隐藏新增内容
+            var observer = new MutationObserver(function(mutations) {
+                var shouldHide = false;
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length > 0) {
+                        shouldHide = true;
+                    }
+                });
+                if (shouldHide) {
+                    hide();
+                }
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            // 持续定期隐藏（防止动态添加）
+            var hideInterval = setInterval(hide, 50);
+            setTimeout(function() {
+                clearInterval(hideInterval);
+            }, 10000); // 10秒后停止
+        })();
+    </script>
 </body>
 
 </html>

@@ -9,7 +9,7 @@ export function TradingViewOptions() {
 
     // fullscreen: false, // 是否启用全屏显示（没用）
     autosize: true, // 是否自动调整图表大小以适应容器
-    interval: "5", // 默认时间周期（单位：分钟），例如 1、5、15、60、1D
+    interval: "15", // 默认时间周期（单位：分钟），15分钟
     toolbar_bg: "#18202a", // 工具栏背景颜色
     debug: false, // 是否启用调试模式（打印日志）
 
@@ -63,7 +63,7 @@ export function TradingViewOptions() {
       "dont_show_boolean_study_arguments",// 隐藏布尔型指标参数
       // "use_localstorage_for_settings",// 使用浏览器localStorage保存设置
       "remove_library_container_border",
-      "save_chart_properties_to_local_storage",
+      // "save_chart_properties_to_local_storage", // 禁用保存图表设置，避免覆盖我们的隐藏配置
       "side_toolbar_in_fullscreen_mode",
       "constraint_dialogs_movement",
       "hide_left_toolbar_by_default", // 不生效
@@ -75,16 +75,8 @@ export function TradingViewOptions() {
 
     // 自定义CSS（用于强制隐藏特定元素）
     custom_css_url: "bundles/common.css",
-    // "data:text/css," +
-    // encodeURIComponent(`
-    //         .chart-toolbar,
-    //         .pane-legend,
-    //         .tradingview-widget-container__widget {
-    //           display: none !important;
-    //         }
-    //       `),
 
-    supported_resolutions: ["1", "5", "15", "30", "60", "1D", "1W", "1M"], // 支持的K线周期列表
+    supported_resolutions: ["1", "5", "15", "60", "240", "1D", "1W", "1M"], // 支持的K线周期列表（1分钟、5分钟、15分钟、1小时、4小时、1天、1周、1月）
     charts_storage_url: "http://saveload.tradingview.com", // 图表保存/加载的远程存储URL
     charts_storage_api_version: "1.1", // 图表存储API版本
     client_id: "tradingview.com", // 客户端ID（用于区分不同应用）
@@ -118,34 +110,37 @@ export function TradingViewOptions() {
       "mainSeriesProperties.areaStyle.linecolor": "#9194a4", // 区域图线条颜色
     },
 
-    // 指标样式覆盖（主要针对成交量颜色）
+    // 指标样式覆盖（主要针对成交量颜色，并隐藏所有指标图例）
     studies_overrides: {
       "volume.volume.color.0": "#fa5252", // 下跌成交量柱颜色
       "volume.volume.color.1": "#12b886", // 上涨成交量柱颜色
       "volume.volume.transparency": 50,   // 成交量柱透明度
+      // 注意：不要设置moving average.plot.transparency为100，否则会完全隐藏移动平均线
+      // "moving average.plot.transparency": 100,  // 已注释：这会隐藏移动平均线
     },
+    
+    // 禁用本地存储，避免保存默认的VOL设置
+    // use_localstorage_for_settings: false, // 已在disabled_features中设置
 
     // 自定义时间周期菜单（供自定义UI使用）
     time_frames: [
-      { text: "1min", resolution: "1", description: "realtime" }, // 实时
-      { text: "1min", resolution: "1", description: "1min" },     // 1分钟
-      { text: "5min", resolution: "5", description: "5min" },     // 5分钟
-      { text: "15min", resolution: "15", description: "15min" },  // 15分钟
-      { text: "30min", resolution: "30", description: "30min" },  // 30分钟
-      { text: "1hour", resolution: "60", description: "1hour" },  // 1小时
-      { text: "1day", resolution: "1D", description: "1day" },    // 1天
-      { text: "1week", resolution: "1W", description: "1week" },  // 1周
-      { text: "1mon", resolution: "1M", description: "1mon" },    // 1月
+      { text: "1min", resolution: "1", description: "1min" },      // 1分钟
+      { text: "5min", resolution: "5", description: "5min" },      // 5分钟
+      { text: "15min", resolution: "15", description: "15min" },   // 15分钟
+      { text: "1hour", resolution: "60", description: "1hour" },   // 1小时
+      { text: "4hour", resolution: "240", description: "4hour" },  // 4小时
+      { text: "1day", resolution: "1D", description: "1day" },     // 1天
+      { text: "1week", resolution: "1W", description: "1week" },   // 1周
+      { text: "1mon", resolution: "1M", description: "1mon" },     // 1月
     ],
   };
 
+  // 应用主题配置
   options.toolbar_bg = "#fff";
   options.custom_css_url = "bundles/common_day.css";
   options.overrides["paneProperties.background"] = "#fff";
-  options.overrides["mainSeriesProperties.candleStyle.upColor"] =
-    "#03C59E";
-  options.overrides["mainSeriesProperties.candleStyle.downColor"] =
-    "#F14A3E";
+  options.overrides["mainSeriesProperties.candleStyle.upColor"] = "#03C59E";
+  options.overrides["mainSeriesProperties.candleStyle.downColor"] = "#F14A3E";
 
   return options;
 }

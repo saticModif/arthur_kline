@@ -33,7 +33,6 @@ export type ResolutionString =
   | "1"
   | "5"
   | "15"
-  | "30"
   | "60"
   | "240"
   | "1D"
@@ -63,7 +62,6 @@ export default class DataFeedWs {
         "1",
         "5",
         "15",
-        "30",
         "60",
         "240",
         "1D",
@@ -95,8 +93,8 @@ export default class DataFeedWs {
         "1",
         "5",
         "15",
-        "30",
         "60",
+        "240",
         "1D",
         "1W",
         "1M",
@@ -122,15 +120,14 @@ export default class DataFeedWs {
     firstDataRequest: boolean
   ) {
     const symbol = symbolInfo.name
-    let interval: string = '5m';
+    let interval: string = '1m';
 
-    // 现货 1m 5m 15m 30m 60m 2h 4h 6h 8h 12h 1d 1w 1M
+    // 现货支持周期：1m, 5m, 15m, 1h, 4h, 1d, 1w, 1M
     if (resolution === "1") interval = "1m";
     else if (resolution === "5") interval = "5m";
     else if (resolution === "15") interval = "15m";
-    else if (resolution === "30") interval = "30m";
-    else if (resolution === "60") interval = "60m";
-    // else if (resolution === "240") interval = "4h";
+    else if (resolution === "60") interval = "1h";  // 注意：1小时API使用"1h"而不是"60m"
+    else if (resolution === "240") interval = "4h";
     else if (resolution === "1D") interval = "1d";
     else if (resolution === "1W") interval = "1w";
     else if (resolution === "1M") interval = "1M";

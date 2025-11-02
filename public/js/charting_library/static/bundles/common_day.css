@@ -66,6 +66,57 @@
       top: -2px;
   }
 
+  /* 强制完全隐藏整个图例区域 - 隐藏所有图例（包括主币对和指标） */
+  .pane-legend-wrap {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 强制完全隐藏整个图例区域 - 隐藏所有指标图例 */
+  .pane-legend-wrap.study {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* 也隐藏指标的所有子元素 */
+  .pane-legend-wrap.study .pane-legend-item-value-container,
+  .pane-legend-wrap.study .pane-legend-item-value-wrap,
+  .pane-legend-wrap.study .pane-legend-item-value,
+  .pane-legend-wrap.study .pane-legend-item-additional {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+  }
+  
+  /* 隐藏主行的值容器 */
+  .pane-legend-wrap.study.main .pane-legend-item-value-container,
+  .pane-legend-wrap.study.main .pane-legend-item-value-wrap {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* 隐藏主币对信息（开高低收等） */
+  .pane-legend-wrap .pane-legend-item-value-container,
+  .pane-legend-wrap .pane-legend-item-value-wrap,
+  .pane-legend-wrap .pane-legend-item-value,
+  .pane-legend-wrap .pane-legend-item-additional {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+  }
+
   .js-rootresizer__contents{
     background-color: #fff;
   }
