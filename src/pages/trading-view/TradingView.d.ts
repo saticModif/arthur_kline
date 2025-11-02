@@ -1,7 +1,9 @@
 declare global {
   interface Window {
-    TradingView: any;
-    Datafeeds: any;
+    TradingView: {
+      widget: any
+    }
   }
 }
-export {};
+
+export {}

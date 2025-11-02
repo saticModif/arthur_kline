@@ -1,5 +1,4 @@
-import mqtt from "mqtt"
-
+import { ArthurApi } from "@/services/api/arthur-api";
 
 export interface CoinInfo {
   symbol: string;
@@ -44,16 +43,16 @@ export type ResolutionString =
 export type SubscribeBarsCallback = (bar: Bar) => void;
 
 
-export default class TradingViewDataFeed {
-  private _datafeedURL: string;
-  private coin: CoinInfo;
-  private mqttClient: mqtt.MqttClient;
+export default class DataFeedWs {
+  private api: ArthurApi;
+  private symbol: string;
+  // private type: string;
   private scale: number;
 
-  constructor(url: string, coin: CoinInfo, mqttClient: mqtt.MqttClient, scale = 2) {
-    this._datafeedURL = url;
-    this.coin = coin;
-    this.mqttClient = mqttClient;
+  constructor(api: ArthurApi, symbol: string, _type: string, scale = 2) {
+    this.api = api;
+    this.symbol = symbol;
+    // this.type = type;
     this.scale = scale;
   }
 
@@ -87,8 +86,8 @@ export default class TradingViewDataFeed {
     __onResolveErrorCallback: (error: string) => void
   ) {
     const data: LibrarySymbolInfo = {
-      name: this.coin.symbol,
-      description: this.coin.symbol,
+      name: this.symbol,
+      description: this.symbol,
       session: "24x7",
       timezone: "Asia/Shanghai",
       ticker: "",
@@ -122,24 +121,26 @@ export default class TradingViewDataFeed {
     _onErrorCallback: (error: string) => void,
     firstDataRequest: boolean
   ) {
-    let mappedResolution: string = resolution;
+    const symbol = symbolInfo.name
+    let interval: string = '5m';
 
-    if (resolution === "240") mappedResolution = "4h";
-    else if (resolution === "1D") mappedResolution = "1D";
-    else if (resolution === "1W") mappedResolution = "1W";
-    else if (resolution === "1M") mappedResolution = "1M";
-    
+    // 现货 1m 5m 15m 30m 60m 2h 4h 6h 8h 12h 1d 1w 1M
+    if (resolution === "1") interval = "1m";
+    else if (resolution === "5") interval = "5m";
+    else if (resolution === "15") interval = "15m";
+    else if (resolution === "30") interval = "30m";
+    else if (resolution === "60") interval = "60m";
+    // else if (resolution === "240") interval = "4h";
+    else if (resolution === "1D") interval = "1d";
+    else if (resolution === "1W") interval = "1w";
+    else if (resolution === "1M") interval = "1M";
 
     try {
-      const params = new URLSearchParams({
-        symbol: symbolInfo.name.replace("-", "/"),
-        from: String(from * 1000),
-        to: String(firstDataRequest ? Date.now() : to * 1000),
-        resolution: mappedResolution,
-      });
-
-      const response = await fetch(`${this._datafeedURL}/history?${params}`);
-      const data = await response.json();
+      console.log(`[DateFeed][http] 开始获取k线数据`);
+      const data = await this.api.market.getSpotKline({
+        symbol: symbol, interval: interval,
+        startTime: from * 1000, endTime: firstDataRequest ? Date.now() : to * 1000
+      })
 
       const bars: Bar[] = data.map((item: any) => ({
         time: item[0],
@@ -149,7 +150,8 @@ export default class TradingViewDataFeed {
         close: item[4],
         volume: item[5],
       }));
-
+      
+      console.log(`[DateFeed][http] 获取到k线数据已放入图表 ==> ${JSON.stringify(bars)}`);
       onHistoryCallback(bars, { noData: bars.length === 0 });
     } catch (e) {
       _onErrorCallback((e as Error).message);
@@ -163,34 +165,27 @@ export default class TradingViewDataFeed {
     ___listenerGUID: string,
     ____onResetCacheNeededCallback: () => void
   ) {
-    const topic = `exchange-kline/${symbolInfo.name.replace("/", "-")}`;
+    const symbol = symbolInfo.name;
+    this.api.market.subscribeSpotKline(symbol).then(async (stream) => {
+      console.log(`[DateFeed][websocket] 订阅${symbol} 数据成功`);
+      const reader = stream!.getReader()
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-    this.mqttClient.subscribe(topic, { qos: 0 }, (err) => {
-      if (err) {
-        console.error("订阅失败:", err);
-        return;
+        if (!Array.isArray(value)) continue;
+
+        console.log(`[DateFeed][websocket] 接受到k线推送数据已放入图表 ==> ${JSON.stringify(value)}`);
+        // 处理实时数据
+        onRealtimeCallback({
+          time: value[0],
+          open: value[1],
+          high: value[2],
+          low: value[3],
+          close: value[4],
+          volume: value[5]
+        });
       }
-
-      this.mqttClient.on("message", (topic, message) => {
-        if (!topic.startsWith("exchange-kline")) return;
-
-        try {
-          const resp = JSON.parse(message.toString());
-
-          const bar: Bar = {
-            time: resp.time,
-            open: resp.openPrice,
-            high: resp.highestPrice,
-            low: resp.lowestPrice,
-            close: resp.closePrice,
-            volume: resp.volume,
-          };
-
-          onRealtimeCallback(bar);
-        } catch (err) {
-          console.error("消息解析错误:", err);
-        }
-      });
     });
   }
 
