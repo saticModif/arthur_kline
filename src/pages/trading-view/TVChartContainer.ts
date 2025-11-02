@@ -822,7 +822,7 @@ function createIndicatorBar(): HTMLElement {
   
   // 隐藏滚动条但保持滚动功能（适用于Webkit浏览器和Firefox）
   bar.style.scrollbarWidth = 'none' // Firefox
-  bar.style.msOverflowStyle = 'none' // IE/Edge
+  bar.style.setProperty('-ms-overflow-style', 'none') // IE/Edge
   
   // 为Webkit浏览器添加隐藏滚动条的样式
   const scrollbarStyle = document.createElement('style')
