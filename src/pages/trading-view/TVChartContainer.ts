@@ -814,8 +814,36 @@ function forceCollapseLegends() {
 // 创建指标栏UI
 function createIndicatorBar(): HTMLElement {
   const bar = document.createElement('div')
-  bar.className = 'bg-gray-800 border-t border-gray-700 px-2 py-1 flex items-center gap-2 overflow-x-auto'
+  bar.className = 'bg-gray-800 border-t border-gray-700 px-2 py-1 flex items-center gap-2'
   bar.style.minHeight = '40px'
+  bar.style.overflowX = 'auto'
+  bar.style.overflowY = 'hidden'
+  bar.style.scrollBehavior = 'smooth'
+  
+  // 隐藏滚动条但保持滚动功能（适用于Webkit浏览器和Firefox）
+  bar.style.scrollbarWidth = 'none' // Firefox
+  bar.style.msOverflowStyle = 'none' // IE/Edge
+  
+  // 为Webkit浏览器添加隐藏滚动条的样式
+  const scrollbarStyle = document.createElement('style')
+  scrollbarStyle.id = 'indicator-bar-scrollbar-hide'
+  scrollbarStyle.textContent = `
+    #indicator-bar::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+      background: transparent;
+    }
+    #indicator-bar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  `
+  if (!document.getElementById('indicator-bar-scrollbar-hide')) {
+    document.head.appendChild(scrollbarStyle)
+  }
+  
+  bar.id = 'indicator-bar'
 
   INDICATOR_CONFIGS.forEach(config => {
     const button = document.createElement('button')
