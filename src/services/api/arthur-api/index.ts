@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { WsApiClient } from '@/utils/api-client';
+import { WsApiClient } from '@/services/api/api-client';
 
 import MarketApi from "./MarketApi";
 

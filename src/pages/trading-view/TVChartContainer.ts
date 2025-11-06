@@ -474,7 +474,7 @@ class IndicatorManager {
   }
 }
 
-export default function TVChartContainer(symbol: string, className?: string): HTMLElement {
+export default function TVChartContainer(strId: string, className?: string): HTMLElement {
   const wrapper = document.createElement('div')
   wrapper.className = twMerge('w-full h-full flex flex-col', className)
 
@@ -489,7 +489,7 @@ export default function TVChartContainer(symbol: string, className?: string): HT
   wrapper.appendChild(indicatorBar)
 
   try {
-    loadTradingView(container, symbol, indicatorBar)
+    loadTradingView(container, strId, indicatorBar)
   } catch (error) {
     console.error('Failed to initialize TradingView:', error)
     container.innerHTML = '<div class="flex items-center justify-center h-full text-white">Failed to load TradingView chart</div>'
@@ -498,7 +498,7 @@ export default function TVChartContainer(symbol: string, className?: string): HT
   return wrapper
 }
 
-async function loadTradingView(container: HTMLElement, symbol: string = "BTC/USDT", indicatorBar: HTMLElement) {
+async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt-spot", indicatorBar: HTMLElement) {
   const library_path = `${import.meta.env.BASE_URL}js/charting_library/`
 
   // 加载 Charting Library
@@ -513,13 +513,13 @@ async function loadTradingView(container: HTMLElement, symbol: string = "BTC/USD
 
   // 建立 Websocket DataFeed
   const api = apiService.arthurApi;
-  const datafeed = new DataFeedWs(api, symbol, 'spot');
+  const datafeed = new DataFeedWs(api, strId);
 
 
   const options = TradingViewOptions()
   options.library_path = library_path
   options.container_id = container.id
-  options.symbol = symbol
+  options.symbol = strId
   options.datafeed = datafeed
 
   // 在创建widget之前就注入CSS，避免VOL显示

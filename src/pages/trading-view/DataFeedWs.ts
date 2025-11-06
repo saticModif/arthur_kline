@@ -44,14 +44,19 @@ export type SubscribeBarsCallback = (bar: Bar) => void;
 
 export default class DataFeedWs {
   private api: ArthurApi;
+  private strId: string;
   private symbol: string;
-  // private type: string;
+  private type: string;
   private scale: number;
 
-  constructor(api: ArthurApi, symbol: string, _type: string, scale = 2) {
+  constructor(api: ArthurApi, strId: string, scale = 2) {
     this.api = api;
-    this.symbol = symbol;
-    // this.type = type;
+    this.strId = strId;
+
+    const [base, quote, type] = strId.split('-');
+
+    this.symbol = `${base}-${quote}`;
+    this.type = type;
     this.scale = scale;
   }
 
@@ -119,14 +124,13 @@ export default class DataFeedWs {
     _onErrorCallback: (error: string) => void,
     firstDataRequest: boolean
   ) {
-    const symbol = symbolInfo.name
     let interval: string = '1m';
 
     // 现货支持周期：1m, 5m, 15m, 1h, 4h, 1d, 1w, 1M
     if (resolution === "1") interval = "1m";
     else if (resolution === "5") interval = "5m";
     else if (resolution === "15") interval = "15m";
-    else if (resolution === "60") interval = "1h";  // 注意：1小时API使用"1h"而不是"60m"
+    else if (resolution === "60") interval = "1h";
     else if (resolution === "240") interval = "4h";
     else if (resolution === "1D") interval = "1d";
     else if (resolution === "1W") interval = "1w";
@@ -134,8 +138,9 @@ export default class DataFeedWs {
 
     try {
       console.log(`[DateFeed][http] 开始获取k线数据`);
-      const data = await this.api.market.getSpotKline({
-        symbol: symbol, interval: interval,
+      const data = await this.api.market.getKline(
+        this.strId, {
+          interval: interval,
         startTime: from * 1000, endTime: firstDataRequest ? Date.now() : to * 1000
       })
 
@@ -147,7 +152,7 @@ export default class DataFeedWs {
         close: item[4],
         volume: item[5],
       }));
-      
+
       console.log(`[DateFeed][http] 获取到k线数据已放入图表 ==> ${JSON.stringify(bars)}`);
       onHistoryCallback(bars, { noData: bars.length === 0 });
     } catch (e) {
@@ -162,9 +167,8 @@ export default class DataFeedWs {
     ___listenerGUID: string,
     ____onResetCacheNeededCallback: () => void
   ) {
-    const symbol = symbolInfo.name;
-    this.api.market.subscribeSpotKline(symbol).then(async (stream) => {
-      console.log(`[DateFeed][websocket] 订阅${symbol} 数据成功`);
+    this.api.market.subscribeKline(this.strId).then(async (stream) => {
+      console.log(`[DateFeed][websocket] 订阅${this.strId} 数据成功`);
       const reader = stream!.getReader()
       while (true) {
         const { value, done } = await reader.read();
@@ -184,6 +188,7 @@ export default class DataFeedWs {
         });
       }
     });
+
   }
 
   unsubscribeBars(_subscriberUID: string) {
