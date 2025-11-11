@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-import { WsApiClient } from '@/services/api/api-client';
+import { HttpApiClient, WsApiClient } from '../_api-client';
 
 import MarketApi from "./MarketApi";
 
 export class ArthurApi {
-  private http = axios.create({ baseURL: 'http://137.220.152.111' });
+  private http: HttpApiClient;
   private spotWs: WsApiClient;
   private futuresWs: WsApiClient;
   private lastTopicNames: string[] = [];
@@ -13,6 +11,8 @@ export class ArthurApi {
   public market: MarketApi;
 
   constructor() {
+    this.http = new HttpApiClient({ baseURL: 'http://137.220.152.111' });
+
     this.spotWs = new WsApiClient({
       url: 'ws://137.220.152.111/exchange/webSocket/v2',
       buildSubscribe: this.buildSubscribe, buildUnsubscribe: this.buildUnsubscribe, recvHandle: this.recvHandle
@@ -43,10 +43,10 @@ export class ArthurApi {
   }
 
   private recvHandle(ws: WsApiClient, jsonData: any) {
-    // 处理数组格式数据
-    if (Array.isArray(jsonData) == false) return;
+    // 统一处理数组和对象格式数据
+    const items = Array.isArray(jsonData) ? jsonData : [jsonData];
 
-    for (const item of jsonData) {
+    for (const item of items) {
       if (!('topic' in item) || typeof item.topic !== 'string') continue;
 
       if (item.topic == 'subscribe') {

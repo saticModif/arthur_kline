@@ -505,21 +505,17 @@ async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt
   await loadChartingLibrary(library_path);
   console.log("TradingView version:", (window as any).TradingView.version());
 
-  // 建立 MQTT DataFeed
-  // const mqttClient = await MqttService.connect("ws://47.83.128.60:8083/mqtt");
-  // const mqttClient = await MqttService.connect("ws://137.220.152.111:8083/mqtt");
-  // const datafeed = new DataFeedMqtt("http://api.arthur.top/swap", { symbol: symbol }, mqttClient, 2);
-  // const datafeed = new DataFeedMqtt("http://137.220.152.111", { symbol: symbol }, mqttClient, 2);
-
   // 建立 Websocket DataFeed
-  const api = apiService.arthurApi;
-  const datafeed = new DataFeedWs(api, strId);
+  const resolutions = ["1", "5", "15", "60", "240", "1D", "1W", "1M"]
+  const api = apiService.api;
+  const datafeed = new DataFeedWs({ api, strId, resolutions: resolutions })
 
-
+  // 配置 TradingView widget
   const options = TradingViewOptions()
   options.library_path = library_path
   options.container_id = container.id
   options.symbol = strId
+  options.supported_resolutions = resolutions;
   options.datafeed = datafeed
 
   // 在创建widget之前就注入CSS，避免VOL显示

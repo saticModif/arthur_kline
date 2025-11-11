@@ -1,5 +1,139 @@
 import pako from 'pako';
 
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+
+export interface HttpApiClientOptions extends AxiosRequestConfig {
+  enableLog?: boolean; // 是否跳过自动日志
+}
+
+export class HttpApiClient {
+  private instance: AxiosInstance;
+  private readonly enableLog: boolean;
+
+  constructor(options: HttpApiClientOptions = {}) {
+    const { enableLog = true, ...axiosConfig } = options;
+    this.enableLog = enableLog;
+    this.instance = axios.create({ timeout: 10000, ...axiosConfig, });
+    this.setupInterceptors();
+  }
+
+  private printRequest(config: InternalAxiosRequestConfig) {
+    const method = config.method?.toUpperCase() ?? 'UNKNOWN';
+    const baseUrl = config.baseURL ?? '';
+    const url = config.url ?? '';
+    const query = config.params ? `?${new URLSearchParams(config.params)}` : '';
+    const fullUrl = `${baseUrl}${url}${query}`;
+
+    // 格式化 headers（只取普通对象，避免循环引用）
+    const safeHeaders = {} as Record<string, string>;
+    for (const key in config.headers) {
+      if (Object.hasOwn(config.headers, key)) {
+        safeHeaders[key] = config.headers[key];
+      }
+    }
+
+    // 打日志（带 [http] 前缀）
+    if (this.enableLog) {
+      console.log(`[http][request][%s] ➡️ %s\n Headers: %o\n Data: %o`,
+        method,
+        fullUrl,
+        safeHeaders,
+        config.data ?? {}
+      );
+    }
+  }
+
+  private printResponse(response: AxiosResponse) {
+    const duration = Date.now() - (response.config as any).meta.startTime;
+
+    const method = response.config.method?.toUpperCase() || 'UNKNOWN';
+    const fullUrl = response.config.url ?? '';
+
+    console.log(
+      `[http][response][%s] ⬅️ %s\n Status: %d\n Data: %o`,
+      method,
+      fullUrl,
+      response.status,
+      response.data
+      // JSON.stringify(response.data)
+    );
+  }
+
+  private setupInterceptors() {
+    // 请求拦截器
+    this.instance.interceptors.request.use(
+      (config: InternalAxiosRequestConfig) => {
+        const startTime = Date.now();
+        (config as any).meta = { startTime };
+        if (this.enableLog) { this.printRequest(config); }
+        return config;
+      },
+      (error: AxiosError) => {
+        if (!this.enableLog) { console.error(`[http] Request setup failed:`, error); }
+        return Promise.reject(error);
+      }
+    );
+
+    // 响应拦截器
+    this.instance.interceptors.response.use(
+      (response: AxiosResponse) => {
+        if (this.enableLog) { this.printResponse(response); }
+        return response;
+      },
+      (error: AxiosError) => {
+        const config = error.config as InternalAxiosRequestConfig & { meta?: { startTime: number } };
+        const status = error.response?.status || '???';
+        const duration = config?.meta?.startTime ? Date.now() - config.meta.startTime : 0;
+
+        if (this.enableLog) {
+          console.error(
+            `[http] ❌ %s %s (%s, %dms)`,
+            config?.method?.toUpperCase(),
+            config?.url,
+            status,
+            duration,
+            error.message
+          );
+        }
+
+        // 全局错误处理（可按需扩展）
+        if (status === 401) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  // ===== 公共 API 方法（带泛型）=====
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const res = await this.instance.get(url, config);
+    return res.data;
+  }
+
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.instance.post(url, data, config).then(res => res.data);
+  }
+
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const res = await this.instance.put(url, data, config);
+    return res.data;
+  }
+
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const res = await this.instance.delete(url, config);
+    return res.data;
+  }
+
+  // 如果需要原始响应（如 headers、status）
+  getInstance(): AxiosInstance {
+    return this.instance;
+  }
+}
+
 export class WsApiClient {
   public url: string | null = null;
   public retryCount: number = 0;
@@ -37,13 +171,14 @@ export class WsApiClient {
 
   // User interface: bulk subscribe (core implementation, single subscribe depends on this method)
   async subscribe(topics: string[]): Promise<(ReadableStream<any> | null)[]> {
+    console.log('[websocket] 订阅topics: ', topics)
     if (!this.url) throw new Error('WebSocket URL not set');
     if (!this.buildSubscribe) throw new Error('No buildSubscribe function provided');
     if (!this.recvHandle) throw new Error('No buildSubscribe function provided');
-    
+
     if (!this.isConnected) {
       await this._connect();
-      console.log(`websocket 连接成功 ==> ${this.url}`);
+      console.log(`[websocket] websocket 连接成功 ==> ${this.url}`);
     }
 
     const streams: (ReadableStream<any> | null)[] = new Array(topics.length).fill(null);
@@ -79,7 +214,7 @@ export class WsApiClient {
         });
       }
     } catch (e) {
-      console.log(`subscribe ${topics} error`, e);
+      console.log(`[websocket] subscribe ${topics} error`, e);
     }
 
     return streams;
@@ -87,6 +222,7 @@ export class WsApiClient {
 
   // User interface: unsubscribe
   async unsubscribe(topics: string[]): Promise<void> {
+    console.log('[websocket] 取消订阅topics: ', topics)
     if (!this.url) throw new Error('WebSocket URL not set');
     if (!this.buildUnsubscribe) throw new Error('No buildSubscribe function provided');
     if (!this.isConnected) return;
@@ -120,7 +256,7 @@ export class WsApiClient {
     }
 
     const jsonString = JSON.stringify(msg);
-    console.debug('<ws> send ==> ' + jsonString);
+    console.debug('[websocket] send ==> ' + jsonString);
 
     try {
       this._socket!.send(jsonString);
@@ -155,7 +291,7 @@ export class WsApiClient {
     if (!this.url) throw new Error('WebSocket URL not set');
 
     this._connectionPromise = new Promise(async (resolve, reject) => {
-      console.debug('<ws> connect ==> ' + this.url);
+      console.debug('[websocket] connect ==> ' + this.url);
 
       try {
         this._socket = new WebSocket(this.url!);
@@ -163,7 +299,7 @@ export class WsApiClient {
         this._reconnectCount = 0;
 
         this._socket.onopen = () => {
-          console.debug('<ws> connected successfully');
+          console.debug('[websocket] connected successfully');
           resolve();
         };
 
@@ -183,7 +319,7 @@ export class WsApiClient {
         }, 10000);
 
       } catch (e) {
-        console.debug('<ws> connect failed: ' + e);
+        console.debug('[websocket] connect failed: ' + e);
         console.error(`websocket 连接失败 ==> ${this.url}`, e);
         this._connectionPromise = null;
         reject(e);
@@ -240,7 +376,7 @@ export class WsApiClient {
         jsonString = event.data;
       }
 
-      console.debug('<ws> recv <== ' + jsonString);
+      console.debug('[websocket] recv <== ' + jsonString);
       const jsonData = JSON.parse(jsonString);
       this.recvHandle!(this, jsonData);
     } catch (e) {
