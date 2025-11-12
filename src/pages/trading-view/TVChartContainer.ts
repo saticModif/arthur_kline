@@ -474,7 +474,7 @@ class IndicatorManager {
   }
 }
 
-export default function TVChartContainer(strId: string, className?: string): HTMLElement {
+export default function TVChartContainer(strId: string, priceScale?: number, className?: string): HTMLElement {
   const wrapper = document.createElement('div')
   wrapper.className = twMerge('w-full h-full flex flex-col', className)
 
@@ -489,7 +489,7 @@ export default function TVChartContainer(strId: string, className?: string): HTM
   wrapper.appendChild(indicatorBar)
 
   try {
-    loadTradingView(container, strId, indicatorBar)
+    loadTradingView(container, strId, indicatorBar, priceScale)
   } catch (error) {
     console.error('Failed to initialize TradingView:', error)
     container.innerHTML = '<div class="flex items-center justify-center h-full text-white">Failed to load TradingView chart</div>'
@@ -498,7 +498,7 @@ export default function TVChartContainer(strId: string, className?: string): HTM
   return wrapper
 }
 
-async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt-spot", indicatorBar: HTMLElement) {
+async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt-spot", indicatorBar: HTMLElement, priceScale?: number) {
   const library_path = `${import.meta.env.BASE_URL}js/charting_library/`
 
   // 加载 Charting Library
@@ -508,7 +508,8 @@ async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt
   // 建立 Websocket DataFeed
   const resolutions = ["1", "5", "15", "60", "240", "1D", "1W", "1M"]
   const api = apiService.api;
-  const datafeed = new DataFeedWs({ api, strId, resolutions: resolutions })
+  // 传递价格精度参数，如果未指定则使用默认值2
+  const datafeed = new DataFeedWs({ api, strId, resolutions: resolutions, scale: priceScale })
 
   // 配置 TradingView widget
   const options = TradingViewOptions()

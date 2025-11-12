@@ -62,12 +62,24 @@ export default class DataFeedWs {
       throw new Error(`Invalid resolutions: ${resolutions}`);
     }
 
+    // 验证并设置价格精度
+    // scale表示小数位数，pricescale = 10^scale
+    // 例如：scale=2 -> pricescale=100 (支持2位小数，如0.01)
+    //      scale=3 -> pricescale=1000 (支持3位小数，如0.003)
+    //      scale=5 -> pricescale=100000 (支持5位小数，如0.00001)
+    const validatedScale = (scale !== undefined && scale >= 0 && scale <= 10) ? scale : 2;
+    if (validatedScale !== scale) {
+      console.warn(`[DataFeed] 无效的价格精度参数 ${scale}，使用默认值 2`);
+    }
+
     this.api = api;
     this.strId = strId;
     this.symbol = `${base}-${quote}`;
     this.type = type;
     this.resolutions = resolutions as ResolutionString[];
-    this.scale = scale;
+    this.scale = validatedScale;
+    
+    console.log(`[DataFeed] 初始化: ${this.symbol}, 价格精度: ${this.scale}位小数 (pricescale=${Math.pow(10, this.scale)})`);
   }
 
   onReady(callback: (config: any) => void) {
@@ -89,6 +101,7 @@ export default class DataFeedWs {
     onSymbolResolvedCallback: (symbol: LibrarySymbolInfo) => void,
     __onResolveErrorCallback: (error: string) => void
   ) {
+    const pricescale = Math.pow(10, this.scale);
     const data: LibrarySymbolInfo = {
       name: this.symbol,
       description: this.symbol,
@@ -96,7 +109,7 @@ export default class DataFeedWs {
       timezone: "Asia/Shanghai",
       ticker: "",
       supported_resolutions: this.resolutions,
-      pricescale: Math.pow(10, this.scale || 2),
+      pricescale: pricescale,
       has_intraday: true,
       has_daily: true,
       has_weekly_and_monthly: true,
@@ -104,6 +117,7 @@ export default class DataFeedWs {
       type: "crypto",
     };
 
+    console.log(`[DataFeed] resolveSymbol: ${this.symbol}, pricescale=${pricescale} (支持${this.scale}位小数)`);
     setTimeout(() => onSymbolResolvedCallback(data), 0);
   }
 
