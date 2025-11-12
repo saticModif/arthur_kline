@@ -72,7 +72,7 @@ export default class MarketApi {
   }) {
     const [base, quote] = options.symbol.split('-');
     const symbol_ = `${base}/${quote}`.toUpperCase();
-    const interval = futuresIntervalMap[options.interval] ?? '5m';
+    const interval = spotIntervalMap[options.interval] ?? options.interval ?? '5m';
 
     const response = await this.http.get('/exchange/api/v1/kline', {
       params: {
