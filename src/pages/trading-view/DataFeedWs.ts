@@ -49,6 +49,8 @@ export default class DataFeedWs {
   private type: string;
   private resolutions: ResolutionString[];
   private scale: number;
+  private pendingRequest: Map<string, Promise<any[]>> = new Map(); // 防重复请求
+  private lastRequestTime: Map<string, number> = new Map(); // 记录上次请求时间
 
 
   constructor(options: DataFeedWsOptions) {
@@ -126,16 +128,78 @@ export default class DataFeedWs {
     else if (resolution === "1W") interval = "1w";
     else if (resolution === "1M") interval = "1M";
 
+    const startTime = from * 1000
+    const endTime = firstDataRequest ? Date.now() : to * 1000
+    
+    // 创建请求键，只基于 resolution（忽略 from/to 的差异）
+    // 因为 TradingView 切换周期时可能会用不同的时间范围调用两次
+    // 对于合约模式，两次请求的 from 值可能不同，所以只使用 resolution
+    const requestKey = `${resolution}`;
+    const now = Date.now();
+    const lastTime = this.lastRequestTime.get(requestKey) || 0;
+    const timeDiff = now - lastTime;
+    
+    // 如果相同的 resolution 在 10000ms 内有请求正在进行，复用该请求
+    if (this.pendingRequest.has(requestKey) && timeDiff < 10000) {
+      // 静默复用，不打印日志（减少日志量）
+      try {
+        const data = await this.pendingRequest.get(requestKey)!;
+        const bars: Bar[] = data.map((item: any) => ({
+          time: parseFloat(item[0]),
+          open: parseFloat(item[1]),
+          high: parseFloat(item[2]),
+          low: parseFloat(item[3]),
+          close: parseFloat(item[4]),
+          volume: parseFloat(item[5]),
+        }));
+        onHistoryCallback(bars, { noData: bars.length === 0 });
+      } catch (e) {
+        _onErrorCallback((e as Error).message);
+      }
+      return;
+    }
+
     try {
-      const startTime = from * 1000
-      const endTime = firstDataRequest ? Date.now() : to * 1000
-      console.log(`[DateFeed][拉取] 开始获取k线数据 ==> 从 ${startTime} 到 ${endTime} interval: ${interval}`);
-      const data = await this.api.getKline(
+      console.log(`[DataFeed] 请求: ${interval} (${resolution})`);
+      
+      // 先创建占位符Promise，立即保存到Map，确保后续请求能立即检测到
+      let resolvePlaceholder!: (value: any) => void;
+      let rejectPlaceholder!: (error: any) => void;
+      const placeholderPromise = new Promise<any[]>((resolve, reject) => {
+        resolvePlaceholder = resolve;
+        rejectPlaceholder = reject;
+      });
+      
+      // 立即保存占位符到 pendingRequest（同步操作）
+      this.pendingRequest.set(requestKey, placeholderPromise);
+      
+      // 记录请求时间
+      this.lastRequestTime.set(requestKey, now);
+      
+      // 创建真正的请求 Promise
+      const requestPromise = this.api.getKline(
         this.strId, {
         interval: interval,
         startTime: startTime,
         endTime: endTime
-      })
+      });
+      
+      // 处理真正的请求结果，resolve占位符
+      requestPromise
+        .then(data => {
+          resolvePlaceholder(data);
+        })
+        .catch(error => {
+          rejectPlaceholder(error);
+        });
+      
+      const data = await placeholderPromise;
+
+      // 请求完成后延迟移除（延迟 10000ms，确保后续重复请求能检测到）
+      // TradingView 在切换周期时会快速发起多个历史数据请求，需要足够长的缓存时间
+      setTimeout(() => {
+        this.pendingRequest.delete(requestKey);
+      }, 10000);
 
       const bars: Bar[] = data.map((item: any) => ({
         time: parseFloat(item[0]),
@@ -146,9 +210,12 @@ export default class DataFeedWs {
         volume: parseFloat(item[5]),
       }));
 
-      console.log(`[DateFeed][拉取] 获取到k线数据已放入图表 ==> ${JSON.stringify(bars)}`);
       onHistoryCallback(bars, { noData: bars.length === 0 });
     } catch (e) {
+      // 请求失败时也要延迟移除（延迟 10000ms，与成功情况保持一致）
+      setTimeout(() => {
+        this.pendingRequest.delete(requestKey);
+      }, 10000);
       _onErrorCallback((e as Error).message);
     }
   }
@@ -171,15 +238,12 @@ export default class DataFeedWs {
     else if (resolution === "1W") interval = "1w";
     else if (resolution === "1M") interval = "1M";
 
-    console.log(`[DataFeed] 订阅K线 - 交易所: ${this.api.implType}, 交易对: ${this.strId}, 时间周期: ${interval}`);
-
     this.api.subscribeKline(this.strId, { interval }).then(async (stream) => {
       if (!stream) {
-        console.log(`[DateFeed][推送] 订阅${this.strId} 失败 - stream为空`);
+        console.warn(`[DataFeed] 订阅失败: ${this.strId}-${interval}`);
         return;
       }
 
-      console.log(`[DateFeed][推送] 订阅${this.strId} 数据成功`);
       const reader = stream.getReader()
       while (true) {
         const { value, done } = await reader.read();
@@ -194,7 +258,6 @@ export default class DataFeedWs {
           volume: parseFloat(item[5]),
         }));
 
-        console.log(`[DateFeed][推送] 接受到k线推送数据已放入图表 ==> ${JSON.stringify(bars)}`);
         bars.forEach(bar => { onRealtimeCallback(bar); })
       }
     });

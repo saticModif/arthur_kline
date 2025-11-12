@@ -930,12 +930,27 @@ const addButtons = (widget: any) => {
     { resolution: "1M", title: "1月", label: "1M" }
   ];
 
+  // 防抖：记录每个按钮上次点击时间
+  const lastClickTime: Map<string, number> = new Map();
+
   // 创建按钮并绑定点击事件
   buttonsData.forEach(data => {
     const button = widget.createButton().attr("title", data.title).append(`<span>${data.label}</span>`);
 
     button.on("click", () => {
-      widget.chart().setChartType(1); // 假设1是您想要设置的图表类型
+      const now = Date.now();
+      const lastTime = lastClickTime.get(data.resolution) || 0;
+      const timeDiff = now - lastTime;
+      
+      // 防抖：500ms 内的重复点击忽略
+      if (timeDiff < 500) {
+        console.log(`[按钮] 检测到重复点击（${timeDiff}ms内），忽略: resolution=${data.resolution}`);
+        return;
+      }
+      
+      lastClickTime.set(data.resolution, now);
+      
+      // 只切换周期，不改变图表类型，避免重复请求
       widget.setSymbol("", data.resolution);
     });
   });
