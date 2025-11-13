@@ -475,6 +475,7 @@ class IndicatorManager {
 }
 
 export default function TVChartContainer(strId: string, priceScale?: number, className?: string, showIndicatorBar: boolean = true): HTMLElement {
+  console.log('[K线] TVChartContainer showIndicatorBar:', showIndicatorBar)
   const wrapper = document.createElement('div')
   wrapper.className = twMerge('w-full h-full flex flex-col', className)
 
@@ -484,6 +485,7 @@ export default function TVChartContainer(strId: string, priceScale?: number, cla
 
   // 根据参数决定是否创建底部指标栏
   const indicatorBar = showIndicatorBar ? createIndicatorBar() : null
+  console.log('[K线] 指标栏是否创建:', indicatorBar !== null)
 
   wrapper.appendChild(container)
   if (indicatorBar) {

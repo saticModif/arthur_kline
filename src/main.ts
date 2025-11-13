@@ -13,7 +13,9 @@ const strId = urlParams.get('strId') || 'btc-usdt-spot' // 'btc-usdt-perpetual'
 const priceScale = parseInt(urlParams.get('priceScale') || '2', 10)
 // 从URL参数获取是否显示底部指标栏，默认为true（显示）
 // 例如：?strId=btc-usdt-spot&showIndicatorBar=false 表示隐藏底部指标栏
-const showIndicatorBar = urlParams.get('showIndicatorBar') !== 'false'
+const showIndicatorBarParam = urlParams.get('showIndicatorBar')
+const showIndicatorBar = showIndicatorBarParam !== 'false'
+console.log('[K线] URL参数 showIndicatorBar:', showIndicatorBarParam, '=> 最终值:', showIndicatorBar)
 
 // 创建 TradingViewPage 并添加到 main 节点
 const tradingViewPage = TradingViewPage(strId, priceScale, undefined, showIndicatorBar)
