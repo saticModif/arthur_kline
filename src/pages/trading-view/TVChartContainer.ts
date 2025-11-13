@@ -474,7 +474,7 @@ class IndicatorManager {
   }
 }
 
-export default function TVChartContainer(strId: string, priceScale?: number, className?: string): HTMLElement {
+export default function TVChartContainer(strId: string, priceScale?: number, className?: string, showIndicatorBar: boolean = true): HTMLElement {
   const wrapper = document.createElement('div')
   wrapper.className = twMerge('w-full h-full flex flex-col', className)
 
@@ -482,14 +482,16 @@ export default function TVChartContainer(strId: string, priceScale?: number, cla
   container.id = 'trading-view-container'
   container.className = 'flex-1 relative'
 
-  // 创建底部指标栏
-  const indicatorBar = createIndicatorBar()
+  // 根据参数决定是否创建底部指标栏
+  const indicatorBar = showIndicatorBar ? createIndicatorBar() : null
 
   wrapper.appendChild(container)
-  wrapper.appendChild(indicatorBar)
+  if (indicatorBar) {
+    wrapper.appendChild(indicatorBar)
+  }
 
   try {
-    loadTradingView(container, strId, indicatorBar, priceScale)
+    loadTradingView(container, strId, indicatorBar, priceScale, showIndicatorBar)
   } catch (error) {
     console.error('Failed to initialize TradingView:', error)
     container.innerHTML = '<div class="flex items-center justify-center h-full text-white">Failed to load TradingView chart</div>'
@@ -498,7 +500,7 @@ export default function TVChartContainer(strId: string, priceScale?: number, cla
   return wrapper
 }
 
-async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt-spot", indicatorBar: HTMLElement, priceScale?: number) {
+async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt-spot", indicatorBar: HTMLElement | null, priceScale?: number, showIndicatorBar: boolean = true) {
   const library_path = `${import.meta.env.BASE_URL}js/charting_library/`
 
   // 加载 Charting Library
@@ -570,8 +572,10 @@ async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt
         
         // 然后执行完整的初始化
         indicatorManager.initializeExistingIndicators()
-        // 更新按钮状态
-        updateIndicatorBarButtons(indicatorBar, indicatorManager)
+        // 只有当指标栏存在时才更新按钮状态
+        if (indicatorBar) {
+          updateIndicatorBarButtons(indicatorBar, indicatorManager)
+        }
       } catch (err) {
         console.error('[初始化] 移除默认指标时出错:', err)
       }
@@ -599,8 +603,10 @@ async function loadTradingView(container: HTMLElement, strId: string = "btc-usdt
       removeVolumeHideCSS() // 最后移除CSS
     }, 200)
     
-    // 绑定指标栏点击事件
-    bindIndicatorBarEvents(indicatorBar, indicatorManager)
+    // 只有当指标栏存在时才绑定点击事件
+    if (indicatorBar) {
+      bindIndicatorBarEvents(indicatorBar, indicatorManager)
+    }
 
     addButtons(widget)  // 添加按钮
     
