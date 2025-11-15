@@ -1,2 +1,2 @@
-# cst-tradingview
+# cw-tradingview
 

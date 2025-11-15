@@ -1,3 +1,6 @@
+import { apiClientConfig } from './api-client';
+export { apiClientConfig as apiConfig };
+
 // 抽象交易所API接口定义
 export interface ExchangeApi {
   readonly implType: string;

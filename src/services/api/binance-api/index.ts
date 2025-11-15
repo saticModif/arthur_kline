@@ -1,4 +1,4 @@
-import { HttpApiClient, WsApiClient } from '../_api-client';
+import { HttpApiClient, WsApiClient } from '../api-client';
 
 import MarketApi from "./MarketApi";
 

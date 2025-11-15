@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios';
 
-import { WsApiClient, HttpApiClient } from '../_api-client';
+import { WsApiClient, HttpApiClient } from '../api-client';
 
 const intervalMap: Record<string, string> = {
   "1m": "1m",

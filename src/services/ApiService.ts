@@ -1,8 +1,7 @@
 import { ArthurApi } from './api/arthur-api';
 import { BinanceApi } from './api/binance-api';
-import type { ExchangeApi } from './api/api';
-
-export * from './api/api';
+import { type ExchangeApi, apiConfig } from './api/api';
+export { type ExchangeApi } from './api/api';
 
 class ApiService {
   private static instance: ApiService | null = null;
@@ -14,6 +13,8 @@ class ApiService {
 
   private constructor() {
     console.debug('ApiService Create')
+    apiConfig.enableHttpLog(true);
+    apiConfig.enableWsLog(true);
     this._api = this._createApi('ArthurApi');
   }
 

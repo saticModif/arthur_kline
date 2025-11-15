@@ -14,6 +14,9 @@ importers:
       axios:
         specifier: ^1.13.1
         version: 1.13.1
+      charting_library:
+        specifier: file:libs\charting_library-29.4.0.tgz
+        version: file:libs/charting_library-29.4.0.tgz
       mqtt:
         specifier: ^5.14.1
         version: 5.14.1
@@ -580,6 +583,10 @@ packages:
   chai@6.2.0:
     resolution: {integrity: sha512-aUTnJc/JipRzJrNADXVvpVqi6CO0dn3nx4EVPxijri+fj3LUUDyZQOgVeW54Ob3Y1Xh9Iz8f+CgaCl8v0mn9bA==}
     engines: {node: '>=18'}
+
+  charting_library@file:libs/charting_library-29.4.0.tgz:
+    resolution: {integrity: sha512-NIWWjj8dqmmLRv4sZo60upRiz3M/g++ODWrLAJf9abkb6WjL3jhsq0OOBS0LzNvDLq4IIU3VrA6k96ztcfhyvQ==, tarball: file:libs/charting_library-29.4.0.tgz}
+    version: 29.4.0
 
   chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
@@ -1599,6 +1606,8 @@ snapshots:
       function-bind: 1.1.2
 
   chai@6.2.0: {}
+
+  charting_library@file:libs/charting_library-29.4.0.tgz: {}
 
   chownr@3.0.0: {}
 

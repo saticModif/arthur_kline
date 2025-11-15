@@ -3,11 +3,11 @@ import { describe, it, expect } from 'vitest'
 import { apiService } from '@/services/ApiService'
 
 describe('arthur-api', () => {
-  const exchangeApi = apiService.api
+  const api = apiService.arthurApi
 
   it('subscribeSpotKline', async () => {
     // 启动订阅
-    const stream = await exchangeApi.subscribeKline('btc-usdt-spot', { interval: '1m' })
+    const stream = await api.market.subscribeSpotKline('BTC/USDT', { interval: '1m' })
     expect(stream).toBeDefined()
     expect(stream).not.toBeNull()
 
@@ -21,10 +21,9 @@ describe('arthur-api', () => {
   }, 5000) // 测试超时时间（默认 5s）
 
   it('getSpotKline', async () => {
-    const data = await exchangeApi.getKline('btc-usdt-spot', {
-      interval: '1m',
-      startTime: Date.now() - 3600 * 1000,
-      endTime: Date.now()
+    const data = await api.market.getSpotKline({
+      symbol: 'BTC/USDT', interval: '1m',
+      startTime: Date.now() - 3600 * 1000, endTime: Date.now()
     })
     expect(data).toBeDefined()
     console.log(JSON.stringify(data))
