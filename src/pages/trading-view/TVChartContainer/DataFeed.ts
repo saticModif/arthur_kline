@@ -24,6 +24,7 @@ export interface DataFeedOptions {
   strId: string;
   resolutions?: string[]; // 可选，默认全量
   pricescale?: number;  // 100 价格 = 123.45 → 内部存储为 12345
+  pricePrecision?: number; // 价格精度（小数位数），例如 2 表示保留 2 位小数
 }
 
 export default class DataFeed implements IBasicDataFeed {
@@ -33,10 +34,11 @@ export default class DataFeed implements IBasicDataFeed {
   private type: string;
   private resolutions: ResolutionString[];
   private pricescale: number;
+  private pricePrecision: number;
 
   // K线数据缓存，按分辨率分组
-  private cacheBars: Map<string, Bar[]> = new Map();           // 数据本体，按插入顺序
-  private cacheIndex: Map<string, Map<number, Bar>> = new Map(); // 索引，快速查找
+  // 使用Map存储，key为时间戳，value为Bar数据，利用Map的特性实现快速更新和查询
+  private cacheBarsMap: Map<string, Map<number, Bar>> = new Map(); // 主要存储：interval -> (time -> Bar)
 
 
   // 当前使用的interval
@@ -46,7 +48,7 @@ export default class DataFeed implements IBasicDataFeed {
   private getBarsPromise: Promise<void> | null = null;
 
   constructor(options: DataFeedOptions) {
-    const { strId, pricescale = 100, resolutions = DEFAULT_RESOLUTIONS } = options;
+    const { strId, pricescale, pricePrecision = 2, resolutions = DEFAULT_RESOLUTIONS } = options;
     const [base, quote, type] = strId.split('-');
 
     // 验证 resolutions
@@ -59,14 +61,15 @@ export default class DataFeed implements IBasicDataFeed {
     this.symbol = `${base}-${quote}`;
     this.type = type;
     this.resolutions = resolutions as ResolutionString[];
-    this.pricescale = pricescale;
+    this.pricePrecision = pricePrecision;
+    // 如果指定了 pricescale 则使用，否则根据 pricePrecision 计算：pricescale = 10^pricePrecision
+    this.pricescale = pricescale ?? Math.pow(10, pricePrecision);
 
     // 根据resolutions初始化缓存结构
     this.resolutions.forEach(resolution => {
       const interval = resolutionMap[resolution];
       if (interval) {
-        this.cacheBars.set(interval, []);
-        this.cacheIndex.set(interval, new Map<number, Bar>());
+        this.cacheBarsMap.set(interval, new Map<number, Bar>());
       }
     });
   }
@@ -140,7 +143,7 @@ export default class DataFeed implements IBasicDataFeed {
         }));
         onResult(bars, { noData: bars.length === 0 });
 
-        // 缓存数据到对应的interval
+        // 缓存数据到对应的interval（使用Map存储，自动处理新增和更新）
         this._cacheBars(interval, bars);
       })
       .catch((err) => {
@@ -172,6 +175,9 @@ export default class DataFeed implements IBasicDataFeed {
         const { value, done } = await reader.read();
         if (done) break;
 
+        // 打印从Stream读取的原始数组数据
+        console.log(`[DataFeed][Socket数据] 从Stream读取的原始数据:`, JSON.stringify(value, null, 2));
+
         const bars: Bar[] = value.map((item: any) => ({
           time: parseFloat(item[0]),
           open: parseFloat(item[1]),
@@ -181,23 +187,38 @@ export default class DataFeed implements IBasicDataFeed {
           volume: parseFloat(item[5]),
         }));
 
-        bars.forEach(bar => {
-          // 获取当前缓存的最后一个元素
-          const barsArray = this.cacheBars.get(interval);
-          if(!barsArray) return;
-          const lastBar = barsArray[-1];
+        // 打印转换后的Bar格式数据
+        console.log(`[DataFeed][Socket数据] 转换后的Bar数据:`, JSON.stringify(bars, null, 2));
 
-          // 如果获取不到，或者时间小于等于最后一个元素的时间，就跳过
-          if (!lastBar || bar.time <= lastBar.time) {
-            // console.log(`[DateFeed][推送] 跳过过时或重复数据: ${JSON.stringify(bar)}`);
+        bars.forEach(bar => {
+          // 使用Map存储，key为时间戳，value为Bar数据
+          // 后端返回的是增量数据，如果有对应的key就覆盖，没有就新增
+          const barsMap = this.cacheBarsMap.get(interval);
+          if (!barsMap) {
+            console.warn(`[DataFeed][推送] interval ${interval} 的缓存Map不存在`);
             return;
           }
 
-          // 缓存实时数据到当前interval
-          this._cacheBars(interval, [bar]);
+          // 检查是否是新增还是更新（在设置之前检查）
+          const isUpdate = barsMap.has(bar.time);
+          
+          // 获取Map中最大的时间戳（设置之前的时间，用于判断是否应该通知TradingView）
+          const lastTimeBeforeUpdate = barsMap.size > 0 ? Math.max(...Array.from(barsMap.keys())) : 0;
+          
+          // 直接set，Map会自动处理新增或覆盖（无论时间顺序如何，都更新缓存）
+          barsMap.set(bar.time, bar);
 
-          console.log(`[DateFeed][推送] 接受到k线推送数据已放入图表 ==> ${JSON.stringify(bar)}`);
-          onRealtimeCallback(bar);
+          // TradingView要求新bar的时间必须 >= 最后一个bar的时间，否则会报"time order violation"
+          // 如果时间更早，说明是历史数据补发，只更新缓存，不通知TradingView
+          // 如果时间相同（更新当前K线）或更大（新K线），才通知TradingView更新图表
+          if (bar.time >= lastTimeBeforeUpdate) {
+            console.log(`[DataFeed][推送] ${isUpdate ? '更新' : '新增'}K线数据 ==> ${JSON.stringify(bar)}`);
+            // 调用回调通知TradingView更新图表
+            onRealtimeCallback(bar);
+          } else {
+            // 历史数据补发，只更新缓存，不通知TradingView（避免time order violation错误）
+            console.log(`[DataFeed][推送] 历史数据补发，仅更新缓存，不通知图表: time=${bar.time}, lastTime=${lastTimeBeforeUpdate}, data=${JSON.stringify(bar)}`);
+          }
         });
       }
     });
@@ -216,47 +237,40 @@ export default class DataFeed implements IBasicDataFeed {
   }
 
   // 缓存K线数据
+  // 使用Map存储，key为时间戳，利用Map的特性：有key就覆盖，没有就新增
   private _cacheBars(interval: string, bars: Bar[]): void {
-    if (!this.cacheBars.has(interval)) {
-      this.cacheBars.set(interval, []);
-      this.cacheIndex.set(interval, new Map<number, Bar>());
+    // 确保interval对应的Map存在
+    if (!this.cacheBarsMap.has(interval)) {
+      this.cacheBarsMap.set(interval, new Map<number, Bar>());
     }
 
-    const barsArray = this.cacheBars.get(interval)!;
-    const indexMap = this.cacheIndex.get(interval)!;
+    const barsMap = this.cacheBarsMap.get(interval)!;
 
     bars.forEach(bar => {
-      // 如果索引中不存在，则添加到数组末尾
-      if (!indexMap.has(bar.time)) {
-        barsArray.push(bar);
-        indexMap.set(bar.time, bar);
-      } else {
-        // 如果已存在，更新数据（保留数组中的引用）
-        const existingBar = indexMap.get(bar.time)!;
-        Object.assign(existingBar, bar);
-      }
+      // 直接set，Map会自动处理：如果key存在就覆盖，不存在就新增
+      barsMap.set(bar.time, bar);
     });
   }
 
   // 根据时间戳获取最近的K线数据
   public getBarByTime(time: number): Bar | null {
     // 如果没有当前interval，返回null
-    if (!this.currentInterval || !this.cacheIndex.has(this.currentInterval)) {
+    if (!this.currentInterval || !this.cacheBarsMap.has(this.currentInterval)) {
       return null;
     }
 
-    const indexMap = this.cacheIndex.get(this.currentInterval)!;
+    const barsMap = this.cacheBarsMap.get(this.currentInterval)!;
 
     // 查找精确匹配的时间
-    if (indexMap.has(time)) {
-      return indexMap.get(time) || null;
+    if (barsMap.has(time)) {
+      return barsMap.get(time) || null;
     }
 
     // 查找最近的时间
     let closestBar: Bar | null = null;
     let minDiff = Infinity;
 
-    for (const [cachedTime, bar] of indexMap.entries()) {
+    for (const [cachedTime, bar] of barsMap.entries()) {
       const diff = Math.abs(cachedTime - time);
       if (diff < minDiff) {
         minDiff = diff;
@@ -272,18 +286,20 @@ export default class DataFeed implements IBasicDataFeed {
     const result: Bar[] = [];
 
     // 如果没有当前interval，返回空数组
-    if (!this.currentInterval || !this.cacheBars.has(this.currentInterval)) {
+    if (!this.currentInterval || !this.cacheBarsMap.has(this.currentInterval)) {
       return result;
     }
 
-    const barsArray = this.cacheBars.get(this.currentInterval)!;
+    const barsMap = this.cacheBarsMap.get(this.currentInterval)!;
 
-    // 由于barsArray是按时间插入顺序存储的，直接遍历即可
-    for (const bar of barsArray) {
+    // 从Map中获取所有数据，按时间戳排序后过滤
+    const bars = Array.from(barsMap.values()).sort((a, b) => a.time - b.time);
+    
+    for (const bar of bars) {
       if (bar.time >= from && bar.time <= to) {
         result.push(bar);
       } else if (bar.time > to) {
-        // 由于是按时间顺序排列，可以提前退出
+        // 由于已排序，可以提前退出
         break;
       }
     }
@@ -294,13 +310,11 @@ export default class DataFeed implements IBasicDataFeed {
   // 清除缓存
   public clearCache(): void {
     // 重新根据resolutions初始化缓存结构
-    this.cacheBars.clear();
-    this.cacheIndex.clear();
+    this.cacheBarsMap.clear();
     this.resolutions.forEach(resolution => {
       const interval = resolutionMap[resolution];
       if (interval) {
-        this.cacheBars.set(interval, []);
-        this.cacheIndex.set(interval, new Map<number, Bar>());
+        this.cacheBarsMap.set(interval, new Map<number, Bar>());
       }
     });
     this.currentInterval = '';
@@ -313,9 +327,9 @@ export default class DataFeed implements IBasicDataFeed {
       'total': 0
     };
 
-    for (const [interval, barsArray] of this.cacheBars.entries()) {
-      stats[interval] = barsArray.length;
-      stats['total'] += barsArray.length;
+    for (const [interval, barsMap] of this.cacheBarsMap.entries()) {
+      stats[interval] = barsMap.size;
+      stats['total'] += barsMap.size;
     }
 
     return stats;
@@ -323,10 +337,12 @@ export default class DataFeed implements IBasicDataFeed {
 
   // 获取指定interval的最后一个bar的时间戳
   public getLastTime(interval: string): number {
-    if (!this.cacheBars.has(interval) || this.cacheBars.get(interval)!.length === 0) {
+    if (!this.cacheBarsMap.has(interval) || this.cacheBarsMap.get(interval)!.size === 0) {
       return 0;
     }
-    const barsArray = this.cacheBars.get(interval)!;
-    return barsArray[barsArray.length - 1].time;
+    const barsMap = this.cacheBarsMap.get(interval)!;
+    // 从Map中获取所有时间戳，取最大值
+    const times = Array.from(barsMap.keys());
+    return Math.max(...times);
   }
 }

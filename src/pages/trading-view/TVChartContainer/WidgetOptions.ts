@@ -41,7 +41,10 @@ export function WidgetLightOptions(): Partial<ChartingLibraryWidgetOptions> {
     ],
 
     // 图表样式覆盖（自定义主题和颜色）
-    overrides: {},
+    overrides: {
+      // 隐藏主图图例中的成交量显示
+      "paneProperties.legendProperties.showVolume": false,
+    },
 
     // 指标样式覆盖（主要针对成交量颜色，并隐藏所有指标图例）
     studies_overrides: {},

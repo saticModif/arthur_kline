@@ -8,13 +8,15 @@ class IndicatorBar {
   private parent: HTMLElement;
   private className?: string;
   private buttons: Map<string, HTMLElement> = new Map();
+  private showIndicatorBar: boolean;
 
   // 指标点击回调
   public onClick?: (indicatorName: string) => void
 
-  constructor(parent: HTMLElement, options: { className?: string } = {}) {
+  constructor(parent: HTMLElement, options: { showIndicatorBar?: boolean, className?: string } = {}) {
     this.parent = parent;
     this.className = options.className;
+    this.showIndicatorBar = options.showIndicatorBar !== false; // 默认为 true
 
     this.bar = document.createElement('div');
     this.bar.id = 'indicator-bar';
@@ -34,7 +36,10 @@ class IndicatorBar {
     this.bar.style.scrollbarWidth = 'none'; // Firefox
     this.bar.style.setProperty('-ms-overflow-style', 'none'); // IE/Edge
 
-
+    // 根据 showIndicatorBar 参数控制显示/隐藏
+    if (!this.showIndicatorBar) {
+      this.bar.style.display = 'none';
+    }
 
     this.setupScrollbarStyles();
     this.createIndicatorButtons();

@@ -17,10 +17,12 @@ export class TVChartContainer {
   private tvWidget!: IChartingLibraryWidget;
   private indicatorManager!: IndicatorManager;
   private datafeed!: DataFeed;
+  private pricePrecision: number;
 
-  constructor(parent: HTMLElement, options: { strId: string, className?: string }) {
-    const { strId, className } = options
+  constructor(parent: HTMLElement, options: { strId: string, pricePrecision?: number, className?: string }) {
+    const { strId, pricePrecision = 2, className } = options
     this.strId = strId;
+    this.pricePrecision = pricePrecision;
 
     // 创建根容器
     const container = document.createElement('div');
@@ -63,7 +65,7 @@ export class TVChartContainer {
     console.log('TradingView version:', (window as any).TradingView.version());
     const library_path = `${import.meta.env.BASE_URL}js/charting_library/`;
     const resolutions = ['1', '5', '15', '60', '240', '1D', '1W', '1M'];
-    this.datafeed = new DataFeed({ strId: this.strId, resolutions });
+    this.datafeed = new DataFeed({ strId: this.strId, resolutions, pricePrecision: this.pricePrecision });
     const datafeed = this.datafeed;
 
     const widgetOptions: ChartingLibraryWidgetOptions = {
@@ -83,6 +85,9 @@ export class TVChartContainer {
     });
 
     this.tvWidget.onChartReady(() => {
+      // 先移除默认的Volume指标（如果存在）
+      this.indicatorManager.removeDefaultVolume();
+      // 然后添加所有Overlay指标
       this._addAllOverlayIndicators();
     });
 

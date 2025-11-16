@@ -79,6 +79,32 @@ export class IndicatorManager {
     return state
   }
 
+  // 移除默认的Volume指标（如果存在）
+  public removeDefaultVolume() {
+    const chart = this.tvWidget.activeChart();
+    if (!chart) return;
+
+    try {
+      // 获取图表上所有的指标
+      const allStudies = chart.getAllStudies();
+      if (!allStudies || allStudies.length === 0) return;
+
+      // 查找默认的Volume指标并移除
+      allStudies.forEach((study) => {
+        const studyName = study.name || '';
+        if (studyName === 'Volume' || studyName.toLowerCase() === 'volume') {
+          const entityId = study.id;
+          if (entityId) {
+            console.log(`[tvchart] 移除默认Volume指标: ${entityId}`);
+            chart.removeEntity(entityId);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn(`[tvchart] 移除默认Volume指标失败:`, e);
+    }
+  }
+
   // 添加全部Overlay指标
   public addAllOverlayIndicators() {
     const chart = this.tvWidget.activeChart();
@@ -116,9 +142,20 @@ export class IndicatorManager {
         } else {
           // 非 overlay 指标：先判断 visable 与 entityId 状态
           if (!indicator.isVisible && !indicator.entityId) {
-            // 添加指标并设为可见
-            indicator.isVisible = true;
-            this._addIndicator(chart, indicator);
+            // 检查图表上是否已经存在该指标（可能是默认创建的）
+            const existingEntityId = this._findExistingStudy(chart, indicator);
+            if (existingEntityId) {
+              // 如果已存在，关联到现有指标
+              indicator.entityId = existingEntityId;
+              indicator.isVisible = true;
+              const study = chart.getStudyById(existingEntityId);
+              study.setVisible(true);
+              console.log(`[tvchart] 关联已存在的指标: ${indicator.name}`, existingEntityId);
+            } else {
+              // 添加指标并设为可见
+              indicator.isVisible = true;
+              this._addIndicator(chart, indicator);
+            }
           } else if (indicator.isVisible && indicator.entityId) {
             // 移除指标并设为隐藏
             indicator.isVisible = false;
@@ -155,6 +192,28 @@ export class IndicatorManager {
 
     chart.removeEntity(indicator.entityId)
     indicator.entityId = null;
+  }
+
+  // 查找图表上是否已存在指定的指标
+  private _findExistingStudy(chart: IChartWidgetApi, indicator: Indicator): EntityId | null {
+    try {
+      const allStudies = chart.getAllStudies();
+      if (!allStudies || allStudies.length === 0) return null;
+
+      for (const study of allStudies) {
+        const studyName = study.name || '';
+        // 检查指标名称是否匹配
+        if (studyName === indicator.config.studyName || studyName.toLowerCase() === indicator.config.studyName.toLowerCase()) {
+          const entityId = study.id;
+          if (entityId) {
+            return entityId;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[tvchart] 查找已存在指标失败:`, e);
+    }
+    return null;
   }
 
   private _emitVisibilityChange() {

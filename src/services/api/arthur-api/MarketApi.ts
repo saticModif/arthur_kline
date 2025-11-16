@@ -92,8 +92,8 @@ export default class MarketApi {
       return [];
     }
 
-    // 排序，确保时间戳递增顺序
-    // const sorted = klineData.slice().sort((a, b) => a[0] - b[0]);
+    // 注意：后端返回的数据已经按时间戳递增顺序排列，前端不需要排序
+    // const sorted = klineData.slice().sort((a, b) => a[0] - b[0]); // 已注释，后端已排序
     return klineData;
   }
 
@@ -115,6 +115,10 @@ export default class MarketApi {
 
         // 将数据放到数组里一起传递到下游，与HTTP请求的返回格式保持一致
         const items = Array.isArray(data) ? data : [data];
+        
+        // 打印转换后的K线数据
+        console.log(`[Socket][现货K线] topic: ${jsonData.topic}, 转换后数据:`, JSON.stringify(items, null, 2));
+        
         controller.enqueue(items);
       }
     }));
@@ -167,6 +171,9 @@ export default class MarketApi {
         const data = jsonData?.data;
         if (!data) return;
 
+        // 打印原始合约K线数据
+        console.log(`[Socket][合约K线-原始] topic: ${jsonData.topic}, 原始数据:`, JSON.stringify(data, null, 2));
+
         // 转换合约数据格式为与现货一致的数组格式 [time, open, high, low, close, volume]
         const transformedData = [
           data.time,           // 时间戳
@@ -176,6 +183,9 @@ export default class MarketApi {
           data.closePrice,     // 收盘价
           data.volume          // 成交量
         ];
+
+        // 打印转换后的合约K线数据
+        console.log(`[Socket][合约K线-转换后] topic: ${jsonData.topic}, 转换后数据:`, JSON.stringify([transformedData], null, 2));
 
         // 将数据放到数组里一起传递到下游，与HTTP请求的返回格式保持一致
         controller.enqueue([transformedData]);
