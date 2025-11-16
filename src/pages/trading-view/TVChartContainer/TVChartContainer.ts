@@ -20,7 +20,10 @@ export class TVChartContainer {
   private pricePrecision: number;
 
   constructor(parent: HTMLElement, options: { strId: string, pricePrecision?: number, className?: string }) {
-    const { strId, pricePrecision = 2, className } = options
+    const { strId, className } = options
+    // 显式处理 pricePrecision，确保正确传递
+    const pricePrecision = options.pricePrecision !== undefined ? options.pricePrecision : 2
+    console.log('[K线] TVChartContainer 接收到的 pricePrecision:', pricePrecision, 'options.pricePrecision:', options.pricePrecision)
     this.strId = strId;
     this.pricePrecision = pricePrecision;
 

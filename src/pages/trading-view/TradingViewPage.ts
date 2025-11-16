@@ -5,7 +5,10 @@ import ChartOverlay from "./ChartOverlay";
 import IndicatorBar from "./IndicatorBar";
 
 export default function TradingViewPage(parent: HTMLElement, options: { strId: string, showIndicatorBar?: boolean, pricePrecision?: number, className?: string }): HTMLElement {
-  const { strId, showIndicatorBar = true, pricePrecision = 2, className } = options
+  const { strId, showIndicatorBar = true, className } = options
+  // 显式处理 pricePrecision，确保正确传递
+  const pricePrecision = options.pricePrecision !== undefined ? options.pricePrecision : 2
+  console.log('[K线] TradingViewPage 接收到的 pricePrecision:', pricePrecision, 'options.pricePrecision:', options.pricePrecision)
   const page = document.createElement('div')
   page.id = 'trading-view-page'
   // page.className = twMerge('w-full h-full bg-gray-900 text-white relative', className)

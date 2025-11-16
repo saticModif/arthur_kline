@@ -48,7 +48,9 @@ export default class DataFeed implements IBasicDataFeed {
   private getBarsPromise: Promise<void> | null = null;
 
   constructor(options: DataFeedOptions) {
-    const { strId, pricescale, pricePrecision = 2, resolutions = DEFAULT_RESOLUTIONS } = options;
+    const { strId, pricescale, resolutions = DEFAULT_RESOLUTIONS } = options;
+    // 显式处理 pricePrecision，确保正确传递
+    const pricePrecision = options.pricePrecision !== undefined ? options.pricePrecision : 2;
     const [base, quote, type] = strId.split('-');
 
     // 验证 resolutions
@@ -64,6 +66,8 @@ export default class DataFeed implements IBasicDataFeed {
     this.pricePrecision = pricePrecision;
     // 如果指定了 pricescale 则使用，否则根据 pricePrecision 计算：pricescale = 10^pricePrecision
     this.pricescale = pricescale ?? Math.pow(10, pricePrecision);
+    
+    console.log(`[DataFeed] 初始化: ${this.symbol}, 价格精度: ${this.pricePrecision}位小数 (pricescale=${this.pricescale})`);
 
     // 根据resolutions初始化缓存结构
     this.resolutions.forEach(resolution => {
@@ -93,6 +97,7 @@ export default class DataFeed implements IBasicDataFeed {
     onSymbolResolvedCallback: (symbol: LibrarySymbolInfo) => void,
     __onResolveErrorCallback: (error: string) => void
   ) {
+    console.log(`[DataFeed] resolveSymbol: ${this.symbol}, pricescale=${this.pricescale} (支持${this.pricePrecision}位小数)`);
     const data: LibrarySymbolInfo = {
       name: this.symbol,
       description: this.symbol,

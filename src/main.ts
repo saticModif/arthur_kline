@@ -4,7 +4,9 @@ import TradingViewPage from './pages/trading-view/TradingViewPage'
 const urlParams = new URLSearchParams(window.location.search);
 const strId = urlParams.get('strId') || 'btc-usdt-spot' // 'btc-usdt-perpetual'
 const showIndicatorBar = urlParams.get('showIndicatorBar') !== 'false' // 默认为 true，只有当参数为 'false' 时才为 false
-const pricePrecision = parseInt(urlParams.get('pricePrecision') || '2', 10) // 默认精度为 2
+const pricePrecisionParam = urlParams.get('pricePrecision');
+const pricePrecision = pricePrecisionParam ? parseInt(pricePrecisionParam, 10) : 2; // 默认精度为 2
+console.log('[K线] URL参数 pricePrecision:', pricePrecisionParam, '=> 最终值:', pricePrecision);
 console.log('[html] strId:', strId)
 console.log('[html] showIndicatorBar:', showIndicatorBar)
 console.log('[html] pricePrecision:', pricePrecision)
