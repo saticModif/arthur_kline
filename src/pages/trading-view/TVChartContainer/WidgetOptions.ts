@@ -44,9 +44,14 @@ export function WidgetLightOptions(): Partial<ChartingLibraryWidgetOptions> {
     overrides: {
       // 隐藏主图图例中的成交量显示
       "paneProperties.legendProperties.showVolume": false,
+      // 隐藏指标在价格轴上的标签（TradingView官方API）
+      "scalesProperties.showStudyLastValue": false,  // 隐藏指标最后值标签
+      "scalesProperties.showStudyPlotLabels": false, // 隐藏指标plot标签
     },
 
     // 指标样式覆盖（主要针对成交量颜色，并隐藏所有指标图例）
+    // 注意：不使用 trackprice 属性，因为该属性在当前版本不可用
+    // 改为在创建指标时使用 priceScale: 'no-scale' 来隐藏价格标签
     studies_overrides: {},
 
     // // 自定义时间周期菜单（供自定义UI使用）

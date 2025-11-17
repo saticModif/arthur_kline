@@ -174,16 +174,77 @@ export class IndicatorManager {
     return true;
   }
 
+  // 隐藏overlay指标在Y轴上的价格标签
+  private _hideIndicatorPriceLabels(study: any, indicator: Indicator) {
+    if (!indicator.config.isOverlay) return;
+    
+    // 延迟应用设置，确保指标完全加载
+    setTimeout(() => {
+      try {
+        const studyName = indicator.config.studyName;
+        let overrides: Record<string, boolean> = {};
+        
+        // 根据指标类型设置不同的trackprice属性
+        if (studyName === 'Bollinger Bands') {
+          // Bollinger Bands有三个plot：upper、lower、median
+          overrides = {
+            'upper.trackprice': false,
+            'lower.trackprice': false,
+            'median.trackprice': false
+          };
+        } else {
+          // 其他overlay指标（MA、EMA、SAR等）使用plot.trackprice
+          overrides = {
+            'plot.trackprice': false
+          };
+        }
+        
+        // 尝试应用设置
+        study.applyOverrides(overrides);
+        console.log(`[tvchart] 已隐藏指标 ${indicator.name} 在Y轴上的价格标签`, overrides);
+        
+        // 多次尝试应用，确保设置生效
+        const retryApply = (retries: number) => {
+          if (retries <= 0) return;
+          setTimeout(() => {
+            try {
+              study.applyOverrides(overrides);
+              console.log(`[tvchart] 重试应用指标 ${indicator.name} 价格标签隐藏设置 (剩余 ${retries - 1} 次)`);
+              retryApply(retries - 1);
+            } catch (e) {
+              console.warn(`[tvchart] 重试应用失败:`, e);
+            }
+          }, 300);
+        };
+        
+        // 重试3次
+        retryApply(3);
+      } catch (e) {
+        console.warn(`[tvchart] 设置指标 ${indicator.name} 价格轴标签可见性失败:`, e);
+      }
+    }, 500); // 延迟500ms确保指标完全初始化
+  }
+
   private _addIndicator(chart: IChartWidgetApi, indicator: Indicator) {
     if (indicator.entityId) return;
 
-    chart.createStudy(indicator.config.studyName, indicator.config.isOverlay, true, indicator.config.inputs)
+    chart.createStudy(
+      indicator.config.studyName, 
+      indicator.config.isOverlay, 
+      true, 
+      indicator.config.inputs, 
+      undefined,
+      indicator.config.options
+    )
       .then((entityId) => {
         if (!entityId) return;
         const study = chart.getStudyById(entityId);
         study.setVisible(indicator.isVisible);
         indicator.entityId = entityId;
         console.log(`[tvchart] create indicator ${indicator.name} success`, indicator)
+      })
+      .catch((error) => {
+        console.error(`[tvchart] create indicator ${indicator.name} failed:`, error);
       })
   }
 

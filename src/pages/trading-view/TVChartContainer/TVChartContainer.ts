@@ -65,7 +65,11 @@ export class TVChartContainer {
   }
 
   private _createTvWidget(parent: HTMLElement): IChartingLibraryWidget {
-    console.log('TradingView version:', (window as any).TradingView.version());
+    const versionInfo = (window as any).TradingView?.version?.();
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('📊 TradingView 图表库版本信息:');
+    console.log('   Version:', versionInfo || '未知');
+    console.log('═══════════════════════════════════════════════════════════');
     const library_path = `${import.meta.env.BASE_URL}js/charting_library/`;
     const resolutions = ['1', '5', '15', '60', '240', '1D', '1W', '1M'];
     this.datafeed = new DataFeed({ strId: this.strId, resolutions, pricePrecision: this.pricePrecision });
@@ -92,12 +96,25 @@ export class TVChartContainer {
       this.indicatorManager.removeDefaultVolume();
       // 然后添加所有Overlay指标
       this._addAllOverlayIndicators();
+      
+      // 使用TradingView官方API隐藏指标价格标签
+      try {
+        // 通过applyOverrides应用全局设置
+        this.tvWidget.applyOverrides({
+          'scalesProperties.showStudyLastValue': false,
+          'scalesProperties.showStudyPlotLabels': false,
+        });
+        console.log('[tvchart] ✅ 已使用TradingView官方API隐藏指标价格标签');
+      } catch (e) {
+        console.warn('[tvchart] 应用TradingView官方API失败:', e);
+      }
     });
 
     this.tvWidget.subscribe('mouse_up', (params: MouseEventParams) => {
       this._handleMouseUp(params);
     });
   }
+
 
   private _createResolutionButtons() {
     const widget = this.tvWidget;
@@ -130,7 +147,7 @@ export class TVChartContainer {
 
     const studiesList = widget.getStudiesList()
     if (studiesList && studiesList.length > 0) {
-      console.log('[调试] 可用的指标列表:', studiesList.map((s: any) => s.name || s))
+      //console.log('[调试] 可用的指标列表:', studiesList.map((s: any) => s.name || s))
     }
 
     this.indicatorManager.addAllOverlayIndicators();
