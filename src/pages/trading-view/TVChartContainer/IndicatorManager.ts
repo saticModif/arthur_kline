@@ -61,10 +61,14 @@ export const SupportIndicators = () => [...DefaultIndicatorMap.keys()];
 
 export class IndicatorManager {
   private tvWidget: IChartingLibraryWidget
-  private indicatorMap: Map<string, Indicator[]> = DefaultIndicatorMap
+  private indicatorMap: Map<string, Indicator[]>
+  private readonly STORAGE_KEY = 'tradingview_indicator_visibility'
 
   constructor(tvWidget: IChartingLibraryWidget) {
     this.tvWidget = tvWidget
+    // 深拷贝默认配置，然后从localStorage恢复可见性状态
+    this.indicatorMap = new Map(DefaultIndicatorMap)
+    this._loadVisibilityFromStorage()
   }
 
   // 指标可见性变化回调
@@ -112,8 +116,9 @@ export class IndicatorManager {
 
     this.indicatorMap.forEach((indicators, key) => {
       indicators.forEach(indicator => {
-        if (!indicator.config.isOverlay || indicator.entityId) return;
-        this._addIndicator(chart, indicator)
+        if (indicator.config.isOverlay || indicator.isVisible) {
+          this._addIndicator(chart, indicator)
+        }
       })
     })
   }
@@ -280,6 +285,43 @@ export class IndicatorManager {
   private _emitVisibilityChange() {
     if (this.onVisibilityChange) {
       this.onVisibilityChange(this.getVisibility())
+    }
+    // 保存可见性状态到localStorage
+    this._saveVisibilityToStorage()
+  }
+
+  // 从localStorage加载可见性状态
+  private _loadVisibilityFromStorage(): void {
+    try {
+      const savedVisibility = localStorage.getItem(this.STORAGE_KEY)
+      if (savedVisibility) {
+        const visibilityState: Record<string, boolean> = JSON.parse(savedVisibility)
+
+        // 更新indicatorMap中的可见性状态
+        this.indicatorMap.forEach((indicators, key) => {
+          const savedVisible = visibilityState[key]
+          if (typeof savedVisible === 'boolean') {
+            indicators.forEach(indicator => {
+              indicator.isVisible = savedVisible
+            })
+          }
+        })
+
+        console.log('[tvchart] 从localStorage加载指标可见性状态:', visibilityState)
+      }
+    } catch (e) {
+      console.warn('[tvchart] 加载localStorage指标状态失败:', e)
+    }
+  }
+
+  // 保存可见性状态到localStorage
+  private _saveVisibilityToStorage(): void {
+    try {
+      const visibilityState = this.getVisibility()
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(visibilityState))
+      console.log('[tvchart] 保存指标可见性状态到localStorage:', visibilityState)
+    } catch (e) {
+      console.warn('[tvchart] 保存localStorage指标状态失败:', e)
     }
   }
 }

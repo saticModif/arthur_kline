@@ -31,11 +31,11 @@ export class HttpApiClient {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Access-Control-Allow-Origin': '*', // 允许所有来源
+        // 'Access-Control-Allow-Origin': '*', // 允许所有来源
       },
       // CORS相关配置
-      maxRedirects: 5,
-      validateStatus: (status) => status < 500, // 处理重定向
+      // maxRedirects: 5,
+      // validateStatus: (status) => status < 500, // 处理重定向
     };
 
     this.instance = axios.create({ ...defaultConfig, ...options });

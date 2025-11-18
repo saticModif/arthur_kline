@@ -18,6 +18,7 @@ export class TVChartContainer {
   private indicatorManager!: IndicatorManager;
   private datafeed!: DataFeed;
   private pricePrecision: number;
+  private resolutionButtons: { resolution: string; element: HTMLElement; }[]  = [];
 
   constructor(parent: HTMLElement, options: { strId: string, pricePrecision?: number, className?: string }) {
     const { strId, className } = options
@@ -108,6 +109,12 @@ export class TVChartContainer {
       } catch (e) {
         console.warn('[tvchart] 应用TradingView官方API失败:', e);
       }
+
+      this.tvWidget.activeChart().onIntervalChanged().subscribe(null, (newResolution: ResolutionString) => {
+        // 当分辨率改变时，同步更新按钮状态
+        this._updateButtonActiveStates(newResolution as string);
+        console.log('[tvchart] 分辨率已切换至:', newResolution);
+      });
     });
 
     this.tvWidget.subscribe('mouse_up', (params: MouseEventParams) => {
@@ -130,15 +137,55 @@ export class TVChartContainer {
       { resolution: "1M", title: "1月", label: "1M" }
     ];
 
+    this.resolutionButtons = [];
+
     // 创建按钮并绑定点击事件
     buttonsData.forEach(data => {
       const button = this.tvWidget.createButton();
       button.setAttribute('title', data.title);
       button.textContent = data.label;
-      // button.append(`<span>${data.label}</span>`)
+
+      // 设置初始状态（默认15分钟为激活状态）
+      if (data.resolution === "15") {
+        this._updateButtonStyle(button, true);
+      } else {
+        this._updateButtonStyle(button, false);
+      }
+
+      // 添加点击事件
       button.addEventListener('click', () => {
         widget.activeChart().setResolution(data.resolution as ResolutionString);
+        this._updateButtonActiveStates(data.resolution);
       });
+
+      this.resolutionButtons.push({
+        resolution: data.resolution,
+        element: button
+      });
+    });
+  }
+
+  // 更新按钮样式
+  private _updateButtonStyle(button: HTMLElement, isActive: boolean): void {
+    if (isActive) {
+      button.style.backgroundColor = 'transparent'; // 透明背景
+      button.style.color = 'black'; // 黑色文字
+      button.style.fontWeight = '600';
+    } else {
+      button.style.backgroundColor = 'transparent'; // 透明背景
+      button.style.color = '#9ca3af'; // 灰色文字
+      button.style.fontWeight = '600';
+    }
+    button.style.transition = 'all 0.2s ease-in-out';
+    button.style.border = 'none'; // 去掉边框
+    button.style.padding = '4px 8px';
+  }
+
+  // 更新所有按钮的激活状态
+  private _updateButtonActiveStates(activeResolution: string): void {
+    this.resolutionButtons.forEach(item => {
+      const isActive = item.resolution === activeResolution;
+      this._updateButtonStyle(item.element, isActive);
     });
   }
 
