@@ -4,6 +4,7 @@ import { widget as TvWidget } from 'charting_library';
 import type {
   IChartingLibraryWidget,
   ChartingLibraryWidgetOptions,
+  CrossHairMovedEventParams,
   MouseEventParams,
   ResolutionString
 } from 'charting_library';
@@ -19,6 +20,7 @@ export class TVChartContainer {
   private datafeed!: DataFeed;
   private pricePrecision: number;
   private resolutionButtons: { resolution: string; element: HTMLElement; }[]  = [];
+  private widgetContainer!: HTMLElement;
 
   constructor(parent: HTMLElement, options: { strId: string, pricePrecision?: number, className?: string }) {
     const { strId, className } = options
@@ -41,6 +43,7 @@ export class TVChartContainer {
       tvWidgetContainer.id = 'tv-widget-container'
       tvWidgetContainer.className = twMerge('w-full h-full');
       container.appendChild(tvWidgetContainer)
+      this.widgetContainer = tvWidgetContainer;
 
       // 创建 TradingView widget
       this.tvWidget = this._createTvWidget(tvWidgetContainer);
@@ -59,6 +62,8 @@ export class TVChartContainer {
 
   // 鼠标点击回调
   public onClick?: (param: { x: number, y: number, time?: number, data?: Record<string, any> }) => void
+  // 十字星滑动回调
+  public onCrosshairMove?: (param: { x: number, y: number, time?: number, data?: Record<string, any> }) => void;
 
   // 获取指标管理器实例
   public getIndicatorManager(): IndicatorManager {
@@ -93,8 +98,8 @@ export class TVChartContainer {
     });
 
     this.tvWidget.onChartReady(() => {
-      // 先移除默认的Volume指标（如果存在）
-      this.indicatorManager.removeDefaultVolume();
+      // 先移除默认的Volume指标（如果存在），使用重试机制确保完全移除
+      this.indicatorManager.removeDefaultVolumeWithRetry(3, 500);
       // 然后添加所有Overlay指标
       this._addAllOverlayIndicators();
       
@@ -110,10 +115,15 @@ export class TVChartContainer {
         console.warn('[tvchart] 应用TradingView官方API失败:', e);
       }
 
-      this.tvWidget.activeChart().onIntervalChanged().subscribe(null, (newResolution: ResolutionString) => {
+      const chart = this.tvWidget.activeChart();
+      chart.onIntervalChanged().subscribe(null, (newResolution: ResolutionString) => {
         // 当分辨率改变时，同步更新按钮状态
         this._updateButtonActiveStates(newResolution as string);
         console.log('[tvchart] 分辨率已切换至:', newResolution);
+      });
+
+      chart.crossHairMoved().subscribe(null, (params) => {
+        this._handleCrosshairMove(params);
       });
     });
 
@@ -208,20 +218,31 @@ export class TVChartContainer {
     const clientX = params.clientX;
     const clientY = params.clientY;
     const timeScale = chart.getTimeScale();
-    const time = timeScale.coordinateToTime(clientX); // 秒级时间戳
+    const coordinateTime = timeScale.coordinateToTime(clientX);
+    const timestampMs = this._normalizeTimeToMs(coordinateTime);
 
-    // 根据时间戳获取对应的K线数据
     let dataRecord: Record<string, any> | undefined;
-    if (time) {
-      const barData = this.datafeed.getBarByTime(time * 1000);
+    if (timestampMs !== null) {
+      const barData = this.datafeed.getBarByTime(timestampMs);
+      const latestBar = this.datafeed.getLatestBar();
       if (barData) {
+        const referencePrice = latestBar?.close;
+        const priceDiff = referencePrice !== undefined ? barData.close - referencePrice : undefined;
+        const priceDiffPercent = referencePrice
+          ? (priceDiff! / referencePrice) * 100
+          : undefined;
+
         dataRecord = {
           time: barData.time,
           open: barData.open,
           high: barData.high,
           low: barData.low,
           close: barData.close,
-          volume: barData.volume
+          volume: barData.volume,
+          referencePrice,
+          priceDiff,
+          priceDiffPercent,
+          crossPrice: barData.close
         };
       }
     }
@@ -230,14 +251,100 @@ export class TVChartContainer {
     this._emitClick({
       x: clientX,
       y: clientY,
-      time: time || undefined,
+      time: timestampMs !== null ? timestampMs : undefined,
       data: dataRecord
     });
+  }
+
+  private _handleCrosshairMove(params?: CrossHairMovedEventParams) {
+    if (!params) {
+      this._emitCrosshairMove({ x: 0, y: 0, data: undefined });
+      return;
+    }
+
+    const { x: clientX, y: clientY } = this._getClientCoordinates(params);
+    const timestampMs = this._normalizeTimeToMs(params.time);
+    if (timestampMs === null) {
+      this._emitCrosshairMove({ x: clientX, y: clientY, data: undefined });
+      return;
+    }
+
+    const barData = this.datafeed.getBarByTime(timestampMs);
+    const latestBar = this.datafeed.getLatestBar();
+    if (!barData) {
+      this._emitCrosshairMove({ x: clientX, y: clientY, data: undefined });
+      return;
+    }
+
+    const referencePrice = latestBar?.close;
+    const priceDiff = referencePrice !== undefined ? barData.close - referencePrice : undefined;
+    const priceDiffPercent = referencePrice
+      ? (priceDiff! / referencePrice) * 100
+      : undefined;
+
+    this._emitCrosshairMove({
+      x: clientX,
+      y: clientY,
+      time: timestampMs,
+      data: {
+        time: barData.time,
+        open: barData.open,
+        high: barData.high,
+        low: barData.low,
+        close: barData.close,
+        volume: barData.volume,
+        referencePrice,
+        priceDiff,
+        priceDiffPercent,
+        crossPrice: typeof params.price === 'number' ? params.price : barData.close
+      }
+    });
+  }
+
+  private _normalizeTimeToMs(time?: number | string | { year: number; month: number; day: number } | null): number | null {
+    if (time === undefined || time === null) return null;
+
+    if (typeof time === 'number') {
+      return time > 1e12 ? Math.round(time) : Math.round(time * 1000);
+    }
+
+    if (typeof time === 'string') {
+      const parsed = Number(time);
+      if (!Number.isNaN(parsed)) {
+        return parsed > 1e12 ? Math.round(parsed) : Math.round(parsed * 1000);
+      }
+      const date = new Date(time);
+      return Number.isNaN(date.valueOf()) ? null : date.getTime();
+    }
+
+    const date = new Date(Date.UTC(time.year, time.month - 1, time.day));
+    return date.getTime();
+  }
+
+  private _getClientCoordinates(params: CrossHairMovedEventParams): { x: number, y: number } {
+    if (!this.widgetContainer) {
+      return {
+        x: params.offsetX ?? 0,
+        y: params.offsetY ?? 0,
+      };
+    }
+
+    const rect = this.widgetContainer.getBoundingClientRect();
+    return {
+      x: rect.left + (params.offsetX ?? 0),
+      y: rect.top + (params.offsetY ?? 0),
+    };
   }
 
   private _emitClick(param: { x: number, y: number, time?: number, data?: Record<string, any> }) {
     if (this.onClick) {
       this.onClick(param);
+    }
+  }
+
+  private _emitCrosshairMove(param: { x: number, y: number, time?: number, data?: Record<string, any> }) {
+    if (this.onCrosshairMove) {
+      this.onCrosshairMove(param);
     }
   }
 }

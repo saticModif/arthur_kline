@@ -57,7 +57,7 @@ export class ArthurApi {
       } else {
         // 打印K线相关的socket数据
         if (item.topic.includes('kline') || item.topic.includes('contract-kline')) {
-          console.log(`[Socket][原始数据] topic: ${item.topic}, data:`, JSON.stringify(item, null, 2));
+          //console.log(`[Socket][原始数据] topic: ${item.topic}, data:`, JSON.stringify(item, null, 2));
         }
         const wsTopic = ws.getTopic(item.topic)
         wsTopic?.addData(item);

@@ -223,7 +223,7 @@ export default class MarketApi {
           if (currentPeriodStart !== null && periodStart !== currentPeriodStart) {
             const aggregatedKline = aggregateKlines(buffer, currentPeriodStart);
             if (aggregatedKline) {
-              console.log(`[Socket][现货K线聚合] 周期: ${targetInterval}, 完成周期, 聚合了 ${buffer.length} 根1m K线, 输出:`, JSON.stringify([aggregatedKline], null, 2));
+              //console.log(`[Socket][现货K线聚合] 周期: ${targetInterval}, 完成周期, 聚合了 ${buffer.length} 根1m K线, 输出:`, JSON.stringify([aggregatedKline], null, 2));
               controller.enqueue([aggregatedKline]);
             }
             // 清空缓冲区，开始新的周期
@@ -232,7 +232,7 @@ export default class MarketApi {
           } else if (currentPeriodStart === null) {
             // 第一次，初始化周期起始时间
             currentPeriodStart = periodStart;
-            console.log(`[Socket][现货K线聚合] 开始新的聚合周期: ${targetInterval}, 起始时间: ${new Date(periodStart).toISOString()}`);
+            //console.log(`[Socket][现货K线聚合] 开始新的聚合周期: ${targetInterval}, 起始时间: ${new Date(periodStart).toISOString()}`);
           }
           
           // 将当前1m数据添加到缓冲区
@@ -242,7 +242,7 @@ export default class MarketApi {
           // 这样用户就能看到实时的价格更新
           const currentAggregatedKline = aggregateKlines(buffer, currentPeriodStart);
           if (currentAggregatedKline) {
-            console.log(`[Socket][现货K线聚合] 周期: ${targetInterval}, 实时更新, 当前缓冲区有 ${buffer.length} 根1m K线, 输出:`, JSON.stringify([currentAggregatedKline], null, 2));
+            //console.log(`[Socket][现货K线聚合] 周期: ${targetInterval}, 实时更新, 当前缓冲区有 ${buffer.length} 根1m K线, 输出:`, JSON.stringify([currentAggregatedKline], null, 2));
             controller.enqueue([currentAggregatedKline]);
           }
         }

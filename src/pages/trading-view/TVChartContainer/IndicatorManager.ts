@@ -94,6 +94,7 @@ export class IndicatorManager {
       if (!allStudies || allStudies.length === 0) return;
 
       // 查找默认的Volume指标并移除
+      let removedCount = 0;
       allStudies.forEach((study) => {
         const studyName = study.name || '';
         if (studyName === 'Volume' || studyName.toLowerCase() === 'volume') {
@@ -101,12 +102,30 @@ export class IndicatorManager {
           if (entityId) {
             console.log(`[tvchart] 移除默认Volume指标: ${entityId}`);
             chart.removeEntity(entityId);
+            removedCount++;
           }
         }
       });
+      
+      if (removedCount > 0) {
+        console.log(`[tvchart] 已移除 ${removedCount} 个默认Volume指标`);
+      }
     } catch (e) {
       console.warn(`[tvchart] 移除默认Volume指标失败:`, e);
     }
+  }
+
+  // 延迟移除默认Volume指标（带重试机制）
+  public removeDefaultVolumeWithRetry(maxRetries: number = 3, delay: number = 500) {
+    let retryCount = 0;
+    const tryRemove = () => {
+      this.removeDefaultVolume();
+      retryCount++;
+      if (retryCount < maxRetries) {
+        setTimeout(tryRemove, delay);
+      }
+    };
+    tryRemove();
   }
 
   // 添加全部Overlay指标
@@ -150,12 +169,22 @@ export class IndicatorManager {
             // 检查图表上是否已经存在该指标（可能是默认创建的）
             const existingEntityId = this._findExistingStudy(chart, indicator);
             if (existingEntityId) {
-              // 如果已存在，关联到现有指标
-              indicator.entityId = existingEntityId;
-              indicator.isVisible = true;
-              const study = chart.getStudyById(existingEntityId);
-              study.setVisible(true);
-              console.log(`[tvchart] 关联已存在的指标: ${indicator.name}`, existingEntityId);
+              // 对于VOL指标，始终移除已存在的默认Volume指标，然后创建新的
+              // 这样可以确保状态一致，避免默认Volume指标被意外显示
+              if (indicatorName === 'VOL') {
+                console.log(`[tvchart] 发现已存在的Volume指标，先移除再创建新的: ${existingEntityId}`);
+                chart.removeEntity(existingEntityId);
+                // 添加指标并设为可见
+                indicator.isVisible = true;
+                this._addIndicator(chart, indicator);
+              } else {
+                // 其他非overlay指标：如果已存在，关联到现有指标
+                indicator.entityId = existingEntityId;
+                indicator.isVisible = true;
+                const study = chart.getStudyById(existingEntityId);
+                study.setVisible(true);
+                console.log(`[tvchart] 关联已存在的指标: ${indicator.name}`, existingEntityId);
+              }
             } else {
               // 添加指标并设为可见
               indicator.isVisible = true;

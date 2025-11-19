@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 
 import { apiService } from '@/services/ApiService'
+import { ArthurApi } from '@/services/api/arthur-api'
 
 describe('arthur-api', () => {
-  const api = apiService.arthurApi
+  // 直接创建ArthurApi实例用于测试
+  const api = new ArthurApi()
 
   it('subscribeSpotKline', async () => {
     // 启动订阅

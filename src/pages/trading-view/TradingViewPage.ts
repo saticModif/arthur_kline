@@ -39,7 +39,8 @@ export default function TradingViewPage(parent: HTMLElement, options: { strId: s
   indicatorBar.onClick = (indicatorName) => indicatorManager.toggleIndicator(indicatorName)
 
   // tvChartContainer -> chartOverlay
-  tvChartContainer.onClick = (data) =>  chartOverlay.handleClick(data)
+  tvChartContainer.onClick = (data) => chartOverlay.handleClick(data)
+  tvChartContainer.onCrosshairMove = (data) => chartOverlay.handleCrosshairMove(data)
 
   return page
 }

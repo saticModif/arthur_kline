@@ -66,7 +66,7 @@ describe('指标价格标签隐藏测试', () => {
     })
     
     // 验证：所有长小数位的价格标签应该被隐藏
-    const visibleIndicatorLabels = priceLabels.filter(label => 
+    const visibleIndicatorLabels = priceLabels.filter((label: { text: string; isHidden: boolean; hasDataAttribute: boolean }) => 
       !label.isHidden
     )
     

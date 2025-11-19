@@ -1,0 +1,188 @@
+{
+  "config": {
+    "configFile": "/Users/huang/Desktop/mo/kline/arthur_kline/playwright.config.ts",
+    "rootDir": "/Users/huang/Desktop/mo/kline/arthur_kline/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/huang/Desktop/mo/kline/arthur_kline/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/huang/Desktop/mo/kline/arthur_kline/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.e2e.test.ts"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "indicator-price-labels.e2e.test.ts",
+      "file": "indicator-price-labels.e2e.test.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "指标价格标签隐藏功能测试",
+          "file": "indicator-price-labels.e2e.test.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "应该隐藏Bollinger Bands指标的价格标签",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7571,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ 已点击BOLL指标按钮\n"
+                        },
+                        {
+                          "text": "📊 价格标签检查结果: {\n  \"labels\": [],\n  \"containerWidth\": 1280,\n  \"totalElements\": 1\n}\n"
+                        },
+                        {
+                          "text": "ℹ️ 未找到指标价格标签（可能已被隐藏或尚未渲染）\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-17T21:47:40.118Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/huang/Desktop/mo/kline/arthur_kline/test-results/indicator-price-labels.e2e-f6e29--应该隐藏Bollinger-Bands指标的价格标签-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "613878977bbba7bc485d-e059048e2563cd7f0169",
+              "file": "indicator-price-labels.e2e.test.ts",
+              "line": 14,
+              "column": 3
+            },
+            {
+              "title": "应该验证CSS样式和MutationObserver已正确设置",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7957,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ CSS样式已正确注入\n"
+                        },
+                        {
+                          "text": "📝 相关控制台日志: [\n  \u001b[32m'[tvchart] 移除默认Volume指标: uLl5pI'\u001b[39m,\n  \u001b[32m'[tvchart] 已添加CSS样式来隐藏指标价格标签'\u001b[39m,\n  \u001b[32m'[tvchart] 已启动MutationObserver来动态隐藏指标价格标签'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator MA_5 success (使用 no-scale 价格轴) {name: MA_5, isVisible: false, config: Object, entityId: IUrdyt}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator MA_10 success (使用 no-scale 价格轴) {name: MA_10, isVisible: false, config: Object, entityId: SjGwqE}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator MA_30 success (使用 no-scale 价格轴) {name: MA_30, isVisible: false, config: Object, entityId: rIj31h}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator MA_60 success (使用 no-scale 价格轴) {name: MA_60, isVisible: false, config: Object, entityId: jcgulR}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator EMA_5 success (使用 no-scale 价格轴) {name: EMA_5, isVisible: false, config: Object, entityId: 8JlHXx}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator EMA_10 success (使用 no-scale 价格轴) {name: EMA_10, isVisible: false, config: Object, entityId: tQdj8s}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator EMA_30 success (使用 no-scale 价格轴) {name: EMA_30, isVisible: false, config: Object, entityId: 3M0oJR}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator EMA_60 success (使用 no-scale 价格轴) {name: EMA_60, isVisible: false, config: Object, entityId: b5nzjm}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator BOLL success (使用 no-scale 价格轴) {name: BOLL, isVisible: false, config: Object, entityId: u4JC9U}'\u001b[39m,\n  \u001b[32m'[tvchart] create indicator SAR success (使用 no-scale 价格轴) {name: SAR, isVisible: false, config: Object, entityId: ceaTgu}'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 MA_5 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 MA_10 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 MA_30 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 MA_60 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 EMA_5 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 EMA_10 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 EMA_30 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 EMA_60 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 BOLL 后，已确认价格轴为 no-scale'\u001b[39m,\n  \u001b[32m'[tvchart] 创建指标 SAR 后，已确认价格轴为 no-scale'\u001b[39m\n]\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-11-17T21:47:48.344Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/Users/huang/Desktop/mo/kline/arthur_kline/test-results/indicator-price-labels.e2e-8384d-CSS样式和MutationObserver已正确设置-chromium/trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "613878977bbba7bc485d-82045b80b36792fd5d16",
+              "file": "indicator-price-labels.e2e.test.ts",
+              "line": 115,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-17T21:47:39.528Z",
+    "duration": 16961.785000000033,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -181,7 +181,7 @@ export default class DataFeed implements IBasicDataFeed {
         if (done) break;
 
         // 打印从Stream读取的原始数组数据
-        console.log(`[DataFeed][Socket数据] 从Stream读取的原始数据:`, JSON.stringify(value, null, 2));
+        //console.log(`[DataFeed][Socket数据] 从Stream读取的原始数据:`, JSON.stringify(value, null, 2));
 
         const bars: Bar[] = value.map((item: any) => ({
           time: parseFloat(item[0]),
@@ -193,7 +193,7 @@ export default class DataFeed implements IBasicDataFeed {
         }));
 
         // 打印转换后的Bar格式数据
-        console.log(`[DataFeed][Socket数据] 转换后的Bar数据:`, JSON.stringify(bars, null, 2));
+        //console.log(`[DataFeed][Socket数据] 转换后的Bar数据:`, JSON.stringify(bars, null, 2));
 
         bars.forEach(bar => {
           // 使用Map存储，key为时间戳，value为Bar数据
@@ -217,12 +217,12 @@ export default class DataFeed implements IBasicDataFeed {
           // 如果时间更早，说明是历史数据补发，只更新缓存，不通知TradingView
           // 如果时间相同（更新当前K线）或更大（新K线），才通知TradingView更新图表
           if (bar.time >= lastTimeBeforeUpdate) {
-            console.log(`[DataFeed][推送] ${isUpdate ? '更新' : '新增'}K线数据 ==> ${JSON.stringify(bar)}`);
+            //console.log(`[DataFeed][推送] ${isUpdate ? '更新' : '新增'}K线数据 ==> ${JSON.stringify(bar)}`);
             // 调用回调通知TradingView更新图表
             onRealtimeCallback(bar);
           } else {
             // 历史数据补发，只更新缓存，不通知TradingView（避免time order violation错误）
-            console.log(`[DataFeed][推送] 历史数据补发，仅更新缓存，不通知图表: time=${bar.time}, lastTime=${lastTimeBeforeUpdate}, data=${JSON.stringify(bar)}`);
+            //console.log(`[DataFeed][推送] 历史数据补发，仅更新缓存，不通知图表: time=${bar.time}, lastTime=${lastTimeBeforeUpdate}, data=${JSON.stringify(bar)}`);
           }
         });
       }
@@ -257,26 +257,46 @@ export default class DataFeed implements IBasicDataFeed {
     });
   }
 
-  // 根据时间戳获取最近的K线数据
-  public getBarByTime(time: number): Bar | null {
-    // 如果没有当前interval，返回null
+  public getLatestBar(): Bar | null {
     if (!this.currentInterval || !this.cacheBarsMap.has(this.currentInterval)) {
       return null;
     }
 
     const barsMap = this.cacheBarsMap.get(this.currentInterval)!;
-
-    // 查找精确匹配的时间
-    if (barsMap.has(time)) {
-      return barsMap.get(time) || null;
+    if (barsMap.size === 0) {
+      return null;
     }
 
-    // 查找最近的时间
+    let latestTime = -Infinity;
+    let latestBar: Bar | null = null;
+    for (const [time, bar] of barsMap.entries()) {
+      if (time > latestTime) {
+        latestTime = time;
+        latestBar = bar;
+      }
+    }
+
+    return latestBar;
+  }
+
+  // 根据时间戳获取最近的K线数据
+  public getBarByTime(time: number): Bar | null {
+    if (!this.currentInterval || !this.cacheBarsMap.has(this.currentInterval)) {
+      return null;
+    }
+
+    const normalizedTime = this.normalizeTimestamp(time);
+    const barsMap = this.cacheBarsMap.get(this.currentInterval)!;
+
+    if (barsMap.has(normalizedTime)) {
+      return barsMap.get(normalizedTime) || null;
+    }
+
     let closestBar: Bar | null = null;
     let minDiff = Infinity;
 
     for (const [cachedTime, bar] of barsMap.entries()) {
-      const diff = Math.abs(cachedTime - time);
+      const diff = Math.abs(cachedTime - normalizedTime);
       if (diff < minDiff) {
         minDiff = diff;
         closestBar = bar;
@@ -297,19 +317,28 @@ export default class DataFeed implements IBasicDataFeed {
 
     const barsMap = this.cacheBarsMap.get(this.currentInterval)!;
 
+    const normalizedFrom = this.normalizeTimestamp(from);
+    const normalizedTo = this.normalizeTimestamp(to);
+
     // 从Map中获取所有数据，按时间戳排序后过滤
     const bars = Array.from(barsMap.values()).sort((a, b) => a.time - b.time);
     
     for (const bar of bars) {
-      if (bar.time >= from && bar.time <= to) {
+      if (bar.time >= normalizedFrom && bar.time <= normalizedTo) {
         result.push(bar);
-      } else if (bar.time > to) {
+      } else if (bar.time > normalizedTo) {
         // 由于已排序，可以提前退出
         break;
       }
     }
 
     return result;
+  }
+
+  private normalizeTimestamp(time: number): number {
+    if (!time && time !== 0) return time;
+    // 13位视为毫秒，10位视为秒
+    return time > 1e12 ? Math.round(time) : Math.round(time * 1000);
   }
 
   // 清除缓存
